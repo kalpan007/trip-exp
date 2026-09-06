@@ -40,6 +40,8 @@
   .conn summary{cursor:pointer; font-size:12.5px; color:var(--brand)}
   .conn .help{font-size:12.5px; color:var(--ink-soft); margin-top:8px; line-height:1.7}
   .conn .help code{background:var(--chip); padding:1px 6px; border-radius:5px; font-size:12px}
+  .conn.compact{padding:9px 14px; margin-bottom:14px}
+  .conn.compact h2{display:none}
 
   .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px}
   .panel + .panel{margin-top:18px}
@@ -113,16 +115,16 @@
     <span class="tag">shared trip expenses, saved to your Google Sheet</span>
   </header>
 
-  <section class="conn">
+  <section class="conn" id="connPanel">
     <div class="line">
       <h2>Google Sheet storage</h2>
       <span class="status" id="connStatus"><span class="dot warn">&#9679;</span> Not connected</span>
     </div>
-    <div class="line" style="margin-top:10px">
+    <div class="line" style="margin-top:10px" id="connectRow">
       <span class="grow"><input type="text" id="apiUrl" placeholder="Paste your Apps Script Web app URL (ends in /exec)" spellcheck="false"></span>
       <button class="btn sm" id="connectBtn" style="flex:0 0 auto">Connect</button>
     </div>
-    <details>
+    <details id="connectHelp">
       <summary>How do I get this URL?</summary>
       <div class="help">
         Open your Google Sheet, then <code>Extensions &rsaquo; Apps Script</code>. Paste the provided
@@ -216,6 +218,7 @@
   function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
   function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
+  var hardcoded=!!(SHEET_API && SHEET_API.trim());
   var endpoint=(SHEET_API && SHEET_API.trim()) || lsGet(LS_URL) || "";
   var currentTrip=null;
   var state={ trip:"", cur:"\u20B9", people:[], expenses:[], draftShares:null };
@@ -352,4 +355,213 @@
       chip.appendChild(nm); chip.appendChild(x); box.appendChild(chip);
     });
   }
-  function e
+  function ensureDraft(){ if(!state.draftShares) state.draftShares=state.people.map(function(p){return p.id;}); state.draftShares=state.draftShares.filter(personActive); }
+  function renderExpenseForm(){
+    var enough=state.people.length>=2;
+    $("expForm").hidden=!enough; $("expHint").hidden=enough;
+    if(!enough) return;
+    ensureDraft();
+    var sel=$("exPaid"); var prev=sel.value; sel.innerHTML="";
+    state.people.forEach(function(p){ var o=document.createElement("option"); o.value=p.id; o.textContent=p.name; sel.appendChild(o); });
+    if(state.people.some(function(p){return p.id===prev;})) sel.value=prev;
+    var box=$("exShares"); box.innerHTML="";
+    state.people.forEach(function(p){
+      var on=state.draftShares.indexOf(p.id)>=0;
+      var b=document.createElement("button"); b.type="button"; b.className="tog"; b.setAttribute("aria-pressed",on?"true":"false"); b.textContent=p.name;
+      b.onclick=function(){ var k=state.draftShares.indexOf(p.id); if(k>=0) state.draftShares.splice(k,1); else state.draftShares.push(p.id); renderExpenseForm(); };
+      box.appendChild(b);
+    });
+    $("toggleAll").textContent=(state.draftShares.length===state.people.length)?"Clear all":"Select everyone";
+  }
+  function renderExpenses(){
+    var box=$("expList");
+    if(!state.expenses.length){ box.innerHTML='<p class="empty">Nothing logged yet.</p>'; return; }
+    box.innerHTML="";
+    state.expenses.slice().reverse().forEach(function(e){
+      var n=e.shares.filter(personActive).length;
+      var row=document.createElement("div"); row.className="exp";
+      var d=document.createElement("div"); d.className="desc";
+      var t=document.createElement("div"); t.className="d"; t.textContent=e.desc||"Expense";
+      var m=document.createElement("div"); m.className="m"; m.textContent=(nameOf(e.paidBy)||"?")+" paid \u00B7 split "+n+" way"+(n===1?"":"s");
+      d.appendChild(t); d.appendChild(m);
+      var a=document.createElement("div"); a.className="amt"; a.textContent=money(e.amount);
+      var x=document.createElement("button"); x.className="del"; x.setAttribute("aria-label","Delete expense"); x.textContent="\uD83D\uDDD1";
+      x.onclick=function(){ deleteExpense(e.id); };
+      row.appendChild(d); row.appendChild(a); row.appendChild(x); box.appendChild(row);
+    });
+  }
+  function renderBalances(){
+    var box=$("balances");
+    if(!state.expenses.length || !state.people.length){ box.innerHTML='<p class="empty">Balances show up once you add an expense.</p>'; return; }
+    box.innerHTML="";
+    computeBalances().forEach(function(b){
+      var row=document.createElement("div"); row.className="bal";
+      var nm=document.createElement("div"); nm.className="nm"; nm.textContent=b.name;
+      var cls=Math.abs(b.net)<0.005?"zero":(b.net>0?"pos":"neg");
+      var net=document.createElement("div"); net.className="net "+cls; net.textContent=(b.net>0.005?"+":"")+money(b.net);
+      var meta=document.createElement("div"); meta.className="meta"; meta.textContent="paid "+money(b.paid)+" \u00B7 share "+money(b.share);
+      var stat=document.createElement("div"); stat.className="meta "+cls; stat.style.textAlign="right";
+      stat.textContent=Math.abs(b.net)<0.005?"settled up":(b.net>0?"gets back":"owes");
+      row.appendChild(nm); row.appendChild(net); row.appendChild(meta); row.appendChild(stat); box.appendChild(row);
+    });
+  }
+  function renderSettle(){
+    var box=$("settle");
+    if(!state.expenses.length || state.people.length<2){ box.innerHTML='<p class="settled">Nothing to settle yet.</p>'; return; }
+    var tx=computeSettlement(computeBalances());
+    if(!tx.length){ box.innerHTML='<p class="settled">Everyone\u2019s square. \uD83C\uDF89</p>'; return; }
+    box.innerHTML="";
+    tx.forEach(function(t){
+      var row=document.createElement("div"); row.className="pay";
+      var f=document.createElement("span"); f.className="from"; f.textContent=t.from;
+      var ar=document.createElement("span"); ar.className="arrow"; ar.textContent="\u2192";
+      var to=document.createElement("span"); to.className="to"; to.textContent=t.to;
+      var pa=document.createElement("span"); pa.className="pa"; pa.textContent=money(t.amt);
+      row.appendChild(f); row.appendChild(ar); row.appendChild(to); row.appendChild(pa); box.appendChild(row);
+    });
+  }
+  function renderApp(){
+    $("currentTripName").textContent=currentTrip||"";
+    $("curInput").value=state.cur;
+    renderPeople(); renderExpenseForm(); renderExpenses(); renderBalances(); renderSettle();
+  }
+
+  // ===== views =====
+  function showTrips(){ $("appView").hidden=true; $("tripsView").hidden=!endpoint; }
+  function showApp(){ $("tripsView").hidden=true; $("appView").hidden=false; }
+
+  // ===== trip navigation =====
+  async function refreshTrips(){
+    if(!endpoint){ showTrips(); return []; }
+    setStatus("warn","Loading trips\u2026");
+    try{
+      var list=await apiList();
+      lsSet(LS_TRIPS, JSON.stringify(list));
+      renderTrips(list); setStatus("ok","Connected"); return list;
+    }catch(err){
+      var cached=lsGet(LS_TRIPS); var list2=cached?JSON.parse(cached):[];
+      renderTrips(list2); setStatus("bad","Couldn't load trips — showing cached list"); toast("Load failed: "+err.message);
+      return list2;
+    }
+  }
+  async function openTrip(name){
+    currentTrip=name; lsSet(LS_LAST,name);
+    setStatus("warn","Opening \u201C"+name+"\u201D\u2026");
+    var cached=lsGet(LS_TRIP+name);
+    if(cached){ try{ fromPayload(JSON.parse(cached)); renderApp(); showApp(); }catch(e){} }
+    if(!endpoint){ showApp(); renderApp(); return; }
+    try{
+      var d=await apiLoad(name);
+      fromPayload(d); lsSet(LS_TRIP+name, JSON.stringify(toPayload()));
+      renderApp(); showApp(); setStatus("ok","Opened \u201C"+name+"\u201D");
+    }catch(err){
+      if(cached){ setStatus("bad","Offline — showing local copy of \u201C"+name+"\u201D"); }
+      else { setStatus("bad","Couldn't open trip"); toast("Open failed: "+err.message); showTrips(); }
+    }
+  }
+  async function createTrip(){
+    var inp=$("newTrip"); var name=(inp.value||"").trim();
+    if(!validName(name)){ toast("Use a name without : \\ / ? * [ ]"); return; }
+    var existing=[]; try{ existing=JSON.parse(lsGet(LS_TRIPS)||"[]"); }catch(e){}
+    if(existing.some(function(t){return t.toLowerCase()===name.toLowerCase();})){ toast("That trip already exists"); return; }
+    inp.value="";
+    currentTrip=name; state={ trip:name, cur:"\u20B9", people:[], expenses:[], draftShares:null };
+    if(!endpoint){ lsSet(LS_TRIP+name, JSON.stringify(toPayload())); openTrip(name); return; }
+    setStatus("warn","Creating \u201C"+name+"\u201D\u2026");
+    try{
+      await apiSave(toPayload());        // creates the new tab in the workbook
+      await refreshTrips();
+      openTrip(name);
+    }catch(err){ setStatus("bad","Couldn't create trip"); toast("Create failed: "+err.message); }
+  }
+  async function removeTrip(name){
+    if(!confirm("Delete the trip \u201C"+name+"\u201D and its tab? This can't be undone.")) return;
+    lsDel(LS_TRIP+name);
+    if(!endpoint){ var l=[]; try{ l=JSON.parse(lsGet(LS_TRIPS)||"[]"); }catch(e){} l=l.filter(function(t){return t!==name;}); lsSet(LS_TRIPS,JSON.stringify(l)); renderTrips(l); return; }
+    setStatus("warn","Deleting \u201C"+name+"\u201D\u2026");
+    try{ var list=await apiDelete(name); lsSet(LS_TRIPS,JSON.stringify(list)); renderTrips(list); setStatus("ok","Deleted"); }
+    catch(err){ setStatus("bad","Couldn't delete"); toast("Delete failed: "+err.message); }
+  }
+  function backToTrips(){ currentTrip=null; showTrips(); refreshTrips(); }
+
+  // ===== per-trip actions =====
+  function addPerson(){
+    var inp=$("personInput"); var name=(inp.value||"").trim();
+    if(!name) return;
+    if(state.people.some(function(p){return p.name.toLowerCase()===name.toLowerCase();})){ toast("That name's already in"); return; }
+    var p={ id:uid(), name:name }; state.people.push(p);
+    if(state.draftShares) state.draftShares.push(p.id);
+    inp.value=""; inp.focus(); renderApp(); persist();
+  }
+  function removePerson(id){
+    var used=state.expenses.some(function(e){ return e.paidBy===id || e.shares.indexOf(id)>=0; });
+    if(used){ toast("Delete their expenses first"); return; }
+    state.people=state.people.filter(function(p){return p.id!==id;});
+    if(state.draftShares) state.draftShares=state.draftShares.filter(function(x){return x!==id;});
+    renderApp(); persist();
+  }
+  function addExpense(){
+    var desc=($("exDesc").value||"").trim();
+    var amt=parseFloat($("exAmt").value);
+    var paidBy=$("exPaid").value;
+    var shares=(state.draftShares||[]).filter(personActive);
+    if(!(amt>0)){ toast("Enter an amount"); $("exAmt").focus(); return; }
+    if(!paidBy){ toast("Pick who paid"); return; }
+    if(!shares.length){ toast("Pick who shared it"); return; }
+    state.expenses.push({ id:uid(), desc:desc, amount:Math.round(amt*100)/100, paidBy:paidBy, shares:shares.slice(), ts:Date.now() });
+    $("exDesc").value=""; $("exAmt").value="";
+    state.draftShares=state.people.map(function(p){return p.id;});
+    renderApp(); persist(); $("exDesc").focus();
+  }
+  function deleteExpense(id){ state.expenses=state.expenses.filter(function(e){return e.id!==id;}); renderApp(); persist(); }
+
+  // ===== toast =====
+  var toastT;
+  function toast(msg){ var el=$("toast"); el.textContent=msg; el.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(function(){ el.classList.remove("show"); },1900); }
+
+  // ===== connect =====
+  function connect(){
+    var url=($("apiUrl").value||"").trim();
+    if(!/^https:\/\/script\.google\.com\/.*\/exec$/.test(url)){ toast("That doesn't look like a /exec Web app URL"); return; }
+    endpoint=url; lsSet(LS_URL,url); boot();
+  }
+
+  // ===== wire up =====
+  function bind(){
+    $("connectBtn").onclick=connect;
+    $("apiUrl").addEventListener("keydown",function(e){ if(e.key==="Enter") connect(); });
+    $("createTrip").onclick=createTrip;
+    $("newTrip").addEventListener("keydown",function(e){ if(e.key==="Enter") createTrip(); });
+    $("backTrips").onclick=backToTrips;
+    $("addPerson").onclick=addPerson;
+    $("personInput").addEventListener("keydown",function(e){ if(e.key==="Enter") addPerson(); });
+    $("addExpense").onclick=addExpense;
+    $("exAmt").addEventListener("keydown",function(e){ if(e.key==="Enter") addExpense(); });
+    $("toggleAll").onclick=function(){ var all=state.draftShares.length===state.people.length; state.draftShares=all?[]:state.people.map(function(p){return p.id;}); renderExpenseForm(); };
+    $("curInput").addEventListener("input",function(){ state.cur=(this.value||"").trim()||"\u20B9"; renderExpenses(); renderBalances(); renderSettle(); persist(); });
+    window.addEventListener("focus",function(){
+      var a=document.activeElement, tags=["INPUT","SELECT","TEXTAREA"];
+      if(endpoint && currentTrip && !saving && (!a || tags.indexOf(a.tagName)<0)) openTrip(currentTrip);
+    });
+  }
+
+  // ===== boot =====
+  async function boot(){
+    if(!endpoint){ setStatus("warn","Not connected — paste your Web app URL"); showTrips(); return; }
+    $("apiUrl").value=endpoint;
+    var list=await refreshTrips();
+    showTrips();
+    var last=lsGet(LS_LAST);
+    if(last && list && list.indexOf(last)>=0){ openTrip(last); }
+  }
+  function applyCompact(){
+    if(!hardcoded) return;
+    $("connectRow").hidden=true;
+    $("connectHelp").hidden=true;
+    $("connPanel").classList.add("compact");
+  }
+  (function init(){ bind(); applyCompact(); boot(); })();
+})();
+</script>
+</body>
+</html>
