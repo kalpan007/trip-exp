@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trip Kitty — shared trip expenses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2A1B3D; --ink-soft:#6A6079; --bg:#F3F0F7; --panel:#FFFFFF;
+    --line:#E7E0F1; --chip:#F1EBFA; --brand:#6C3FB5; --brand-deep:#4B2A86;
+    --amber:#F0A429; --pos:#0E9E6E; --neg:#D33F57;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --radius:14px; --shadow:0 1px 2px rgba(42,27,61,.06),0 8px 24px rgba(42,27,61,.06);
+  }
+  *{box-sizing:border-box} html,body{margin:0}
+  body{font-family:var(--sans); color:var(--ink); background:var(--bg); line-height:1.5; -webkit-text-size-adjust:100%;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .wrap{max-width:1040px; margin:0 auto; padding:22px 18px 64px}
+  a{color:var(--brand)}
+  header.top{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:16px}
+  .mark{font-family:var(--serif); font-weight:700; font-size:30px; letter-spacing:-.01em; line-height:1}
+  .mark .k{color:var(--brand)}
+  .tag{color:var(--ink-soft); font-size:14px}
+  .iconbtn{border:1px solid var(--line); background:var(--panel); color:var(--ink-soft); border-radius:10px; padding:9px 12px; font-size:13px; cursor:pointer; font-family:var(--sans)}
+  .iconbtn:hover{border-color:var(--brand); color:var(--brand)}
+
+  .conn{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px 16px; margin-bottom:18px}
+  .conn .line{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .conn h2{font-family:var(--serif); font-weight:600; font-size:16px; margin:0 8px 0 0}
+  .conn .status{font-size:13px; color:var(--ink-soft); display:flex; align-items:center; gap:6px}
+  .dot.ok{color:var(--pos)} .dot.warn{color:var(--amber)} .dot.bad{color:var(--neg)}
+  .conn .grow{flex:1 1 260px}
+  .conn input[type=text]{width:100%; font-size:14px; border:1px solid var(--line); border-radius:9px; padding:9px 11px; font-family:var(--sans); color:var(--ink)}
+  .conn input:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(108,63,181,.12)}
+  .conn details{margin-top:8px}
+  .conn summary{cursor:pointer; font-size:12.5px; color:var(--brand)}
+  .conn .help{font-size:12.5px; color:var(--ink-soft); margin-top:8px; line-height:1.7}
+  .conn .help code{background:var(--chip); padding:1px 6px; border-radius:5px; font-size:12px}
+
+  .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px}
+  .panel + .panel{margin-top:18px}
+  h2{font-family:var(--serif); font-weight:600; font-size:19px; margin:0 0 14px; letter-spacing:-.01em}
+  .sub{color:var(--ink-soft); font-size:13px; margin:-8px 0 14px}
+  label{display:block; font-size:12.5px; color:var(--ink-soft); margin:0 0 5px}
+  input[type=text],input[type=number],select{width:100%; font-family:var(--sans); font-size:16px; color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:11px 12px; background:#fff}
+  input:focus,select:focus{outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(108,63,181,.12)}
+  .row{display:flex; gap:10px} .row > *{flex:1}
+  .btn{font-family:var(--sans); font-weight:600; font-size:15px; border:none; cursor:pointer; border-radius:10px; padding:11px 16px; background:var(--brand); color:#fff}
+  .btn:hover{background:var(--brand-deep)} .btn:active{transform:translateY(1px)}
+  .btn.sm{font-size:13px; padding:9px 13px}
+
+  .triplist{display:flex; flex-direction:column; gap:10px; margin-bottom:20px}
+  .triprow{display:flex; align-items:center; gap:8px}
+  .tripopen{flex:1; text-align:left; font-family:var(--serif); font-weight:600; font-size:18px; color:var(--ink);
+    background:var(--chip); border:1px solid var(--line); border-radius:12px; padding:14px 16px; cursor:pointer}
+  .tripopen:hover{border-color:var(--brand); color:var(--brand)}
+  .tripdel{border:1px solid var(--line); background:#fff; color:var(--ink-soft); border-radius:10px; padding:12px; cursor:pointer; font-size:15px}
+  .tripdel:hover{border-color:var(--neg); color:var(--neg)}
+  .empty{color:var(--ink-soft); font-size:14px; padding:6px 0}
+
+  .appbar{display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:16px}
+  .appbar .name{font-family:var(--serif); font-weight:700; font-size:24px; letter-spacing:-.01em}
+  .cur{display:flex; align-items:center; gap:6px; color:var(--ink-soft); font-size:13px; margin-left:auto}
+  .cur input{width:52px; text-align:center; font-size:15px; border:1px solid var(--line); border-radius:8px; padding:6px; font-family:var(--sans); color:var(--ink)}
+  .cur input:focus{outline:none; border-color:var(--brand)}
+
+  .grid{display:grid; grid-template-columns:1fr; gap:18px}
+  @media(min-width:900px){ .grid{grid-template-columns:1.15fr .85fr; align-items:start} }
+  .people{display:flex; flex-wrap:wrap; gap:8px; margin-top:14px}
+  .pchip{display:inline-flex; align-items:center; gap:7px; background:var(--chip); border-radius:999px; padding:7px 10px 7px 13px; font-size:14px}
+  .pchip .x{border:none; background:transparent; color:var(--ink-soft); cursor:pointer; font-size:15px; line-height:1; padding:2px}
+  .pchip .x:hover{color:var(--neg)}
+  .fieldset{margin-top:12px}
+  .toggles{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px}
+  .tog{border:1px solid var(--line); background:#fff; color:var(--ink-soft); border-radius:999px; padding:7px 13px; font-size:14px; cursor:pointer; user-select:none; font-family:var(--sans)}
+  .tog[aria-pressed=true]{background:var(--brand); border-color:var(--brand); color:#fff}
+  .allbtn{font-size:12.5px; color:var(--brand); background:transparent; border:none; cursor:pointer; padding:4px 0; margin-top:8px}
+  .exp{display:flex; align-items:center; gap:12px; padding:12px 4px; border-top:1px solid var(--line)}
+  .exp:first-of-type{border-top:none}
+  .exp .desc{flex:1; min-width:0}
+  .exp .desc .d{font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .exp .desc .m{font-size:12.5px; color:var(--ink-soft)}
+  .exp .amt{font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .exp .del{border:none; background:transparent; color:var(--ink-soft); cursor:pointer; font-size:16px; padding:6px}
+  .exp .del:hover{color:var(--neg)}
+  .bal{display:grid; grid-template-columns:1fr auto; gap:2px 12px; padding:11px 2px; border-top:1px solid var(--line)}
+  .bal:first-of-type{border-top:none}
+  .bal .nm{font-weight:600}
+  .bal .meta{font-size:12.5px; color:var(--ink-soft)}
+  .bal .net{font-weight:700; font-variant-numeric:tabular-nums; text-align:right; align-self:center}
+  .pos{color:var(--pos)} .neg{color:var(--neg)} .zero{color:var(--ink-soft)}
+  .settle{background:linear-gradient(180deg,#3B2568,#2A1B3D); color:#F3EEFA; border:none}
+  .settle h2{color:#fff} .settle .sub{color:#C9BBE4}
+  .pay{display:flex; align-items:center; gap:10px; padding:12px 2px; border-top:1px solid rgba(255,255,255,.12); font-size:15px}
+  .pay:first-of-type{border-top:none}
+  .pay .from{font-weight:600} .pay .arrow{color:var(--amber); font-weight:700}
+  .pay .to{font-weight:600; flex:1} .pay .pa{font-weight:700; font-variant-numeric:tabular-nums; color:#fff}
+  .settled{color:#C9BBE4; font-size:14px; padding:6px 0}
+  .foot{color:var(--ink-soft); font-size:12.5px; margin-top:24px; text-align:center; line-height:1.7}
+  #toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; padding:10px 16px; border-radius:999px; font-size:13.5px; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:50}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  @media (prefers-reduced-motion: reduce){ *{transition:none !important} .btn:active{transform:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <span class="mark">Trip <span class="k">Kitty</span></span>
+    <span class="tag">shared trip expenses, saved to your Google Sheet</span>
+  </header>
+
+  <section class="conn">
+    <div class="line">
+      <h2>Google Sheet storage</h2>
+      <span class="status" id="connStatus"><span class="dot warn">&#9679;</span> Not connected</span>
+    </div>
+    <div class="line" style="margin-top:10px">
+      <span class="grow"><input type="text" id="apiUrl" placeholder="Paste your Apps Script Web app URL (ends in /exec)" spellcheck="false"></span>
+      <button class="btn sm" id="connectBtn" style="flex:0 0 auto">Connect</button>
+    </div>
+    <details>
+      <summary>How do I get this URL?</summary>
+      <div class="help">
+        Open your Google Sheet, then <code>Extensions &rsaquo; Apps Script</code>. Paste the provided
+        <code>Code.gs</code>, then <code>Deploy &rsaquo; New deployment &rsaquo; Web app</code>, set
+        <b>Who has access</b> to <b>Anyone</b>, deploy, and copy the <b>Web app URL</b> here.
+      </div>
+    </details>
+  </section>
+
+  <section class="panel" id="tripsView" hidden>
+    <h2>Your trips</h2>
+    <p class="sub">Pick a trip, or start a new one. Each trip is its own tab in your Sheet.</p>
+    <div class="triplist" id="tripList"></div>
+    <div class="row">
+      <input type="text" id="newTrip" placeholder="New trip name — e.g. Goa 2026" spellcheck="false">
+      <button class="btn" id="createTrip" style="flex:0 0 auto">Create trip</button>
+    </div>
+  </section>
+
+  <div id="appView" hidden>
+    <div class="appbar">
+      <button class="iconbtn" id="backTrips">&larr; All trips</button>
+      <span class="name" id="currentTripName"></span>
+      <span class="cur">currency <input id="curInput" type="text" maxlength="3" aria-label="Currency symbol"></span>
+    </div>
+
+    <div class="grid">
+      <div>
+        <section class="panel">
+          <h2>Who's on the trip</h2>
+          <div class="row">
+            <input type="text" id="personInput" placeholder="Add a name" aria-label="New person name">
+            <button class="btn" id="addPerson" style="flex:0 0 auto">Add</button>
+          </div>
+          <div class="people" id="peopleList"></div>
+        </section>
+        <section class="panel">
+          <h2>Add an expense</h2>
+          <p class="sub" id="expHint">Add at least two people first.</p>
+          <div id="expForm" hidden>
+            <div class="fieldset">
+              <label for="exDesc">What was it for</label>
+              <input type="text" id="exDesc" placeholder="Dinner, cab, hotel…">
+            </div>
+            <div class="row" style="margin-top:12px">
+              <div><label for="exAmt">Amount</label><input type="number" id="exAmt" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+              <div><label for="exPaid">Who paid</label><select id="exPaid"></select></div>
+            </div>
+            <div class="fieldset">
+              <label>Split between</label>
+              <div class="toggles" id="exShares"></div>
+              <button class="allbtn" id="toggleAll" type="button">Select everyone</button>
+            </div>
+            <button class="btn" id="addExpense" style="width:100%; margin-top:14px">Add expense</button>
+          </div>
+        </section>
+        <section class="panel">
+          <h2>Expenses</h2>
+          <div id="expList"><p class="empty">Nothing logged yet.</p></div>
+        </section>
+      </div>
+      <div>
+        <section class="panel">
+          <h2>Who owes what</h2>
+          <div id="balances"><p class="empty">Balances show up once you add an expense.</p></div>
+        </section>
+        <section class="panel settle">
+          <h2>Settle up</h2>
+          <p class="sub">The fewest payments to square everyone up.</p>
+          <div id="settle"><p class="settled">Nothing to settle yet.</p></div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <p class="foot">
+    Works on Android, iPhone, Mac and Windows. Each trip is stored on its own tab in your Google Sheet.<br>
+    A local copy is kept so the page still opens offline; changes sync back when you're online.
+  </p>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+(function(){
+  // ===== Optional: hard-code your Web app URL here to skip the Connect box =====
+  var SHEET_API = ""; // e.g. "https://script.google.com/macros/s/AKfy.../exec"
+
+  var LS_URL="kitty:endpoint", LS_LAST="kitty:lasttrip", LS_TRIPS="kitty:trips", LS_TRIP="kitty:trip:";
+  function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+  function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+  function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+
+  var endpoint=(SHEET_API && SHEET_API.trim()) || lsGet(LS_URL) || "";
+  var currentTrip=null;
+  var state={ trip:"", cur:"\u20B9", people:[], expenses:[], draftShares:null };
+
+  var uid=function(){ return (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+              : Date.now().toString(36)+Math.random().toString(36).slice(2,8); };
+  function nf(n){ try{ return new Intl.NumberFormat("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2}).format(n); }catch(e){ return n.toFixed(2); } }
+  function money(n){ return state.cur+nf(n); }
+  var $=function(id){ return document.getElementById(id); };
+  function nameOf(id){ var p=state.people.find(function(x){return x.id===id;}); return p?p.name:""; }
+  function personActive(id){ return state.people.some(function(x){return x.id===id;}); }
+  function validName(n){ return !!n && !/[:\\\/\?\*\[\]]/.test(n) && n.length<=90; }
+
+  function toPayload(){
+    return { trip:currentTrip, cur:state.cur,
+      people:state.people.map(function(p){return p.name;}),
+      expenses:state.expenses.map(function(e){
+        return { desc:e.desc, amount:e.amount, paidBy:nameOf(e.paidBy), shares:e.shares.filter(personActive).map(nameOf), ts:e.ts };
+      }) };
+  }
+  function fromPayload(d){
+    d=d||{};
+    state.cur=d.cur||"\u20B9";
+    var names=Array.isArray(d.people)?d.people:[];
+    state.people=names.map(function(n){ return { id:uid(), name:String(n) }; });
+    var map={}; state.people.forEach(function(p){ map[p.name]=p.id; });
+    var ex=Array.isArray(d.expenses)?d.expenses:[];
+    state.expenses=ex.map(function(e){
+      var shares=(Array.isArray(e.shares)?e.shares:[]).map(function(n){return map[n];}).filter(Boolean);
+      return { id:uid(), desc:String(e.desc||""), amount:Number(e.amount||0), paidBy:map[e.paidBy]||"", shares:shares, ts:Number(e.ts||0) };
+    }).filter(function(e){ return e.paidBy; });
+    state.draftShares=null;
+  }
+
+  // ===== network =====
+  async function apiList(){
+    var res=await fetch(endpoint+"?action=list",{method:"GET"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    var d=await res.json(); if(d&&d.error) throw new Error(d.error);
+    return Array.isArray(d.trips)?d.trips:[];
+  }
+  async function apiLoad(name){
+    var res=await fetch(endpoint+"?action=load&trip="+encodeURIComponent(name),{method:"GET"});
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    var d=await res.json(); if(d&&d.error) throw new Error(d.error);
+    return d;
+  }
+  async function apiSave(payload){
+    var res=await fetch(endpoint,{ method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(payload) });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    var d=await res.json(); if(d&&d.error) throw new Error(d.error);
+    return d;
+  }
+  async function apiDelete(name){
+    var res=await fetch(endpoint,{ method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify({action:"delete", trip:name}) });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    var d=await res.json(); if(d&&d.error) throw new Error(d.error);
+    return Array.isArray(d.trips)?d.trips:[];
+  }
+
+  function setStatus(kind,text){
+    var cls=kind==="ok"?"ok":kind==="bad"?"bad":"warn";
+    $("connStatus").innerHTML='<span class="dot '+cls+'">\u25CF</span> '+text;
+  }
+
+  // ===== persistence for the open trip =====
+  var saving=false, pending=false;
+  async function persist(){
+    if(!currentTrip) return;
+    var payload=toPayload();
+    lsSet(LS_TRIP+currentTrip, JSON.stringify(payload));
+    if(!endpoint){ toast("Saved on this device"); return; }
+    if(saving){ pending=true; return; }
+    saving=true; setStatus("warn","Saving\u2026");
+    try{ await apiSave(payload); setStatus("ok","Saved to \u201C"+currentTrip+"\u201D"); }
+    catch(err){ setStatus("bad","Couldn't reach the sheet — saved locally"); toast("Save failed: "+err.message); }
+    saving=false;
+    if(pending){ pending=false; persist(); }
+  }
+
+  // ===== calculations =====
+  function computeBalances(){
+    var paid={}, share={};
+    state.people.forEach(function(p){ paid[p.id]=0; share[p.id]=0; });
+    state.expenses.forEach(function(e){
+      var parts=e.shares.filter(personActive);
+      if(personActive(e.paidBy)) paid[e.paidBy]+=e.amount;
+      if(parts.length){ var per=e.amount/parts.length; parts.forEach(function(id){ share[id]+=per; }); }
+    });
+    return state.people.map(function(p){ return { id:p.id, name:p.name, paid:paid[p.id], share:share[p.id], net:paid[p.id]-share[p.id] }; });
+  }
+  function computeSettlement(bals){
+    var arr=bals.map(function(b){ return { name:b.name, c:Math.round(b.net*100) }; });
+    var sum=arr.reduce(function(s,x){return s+x.c;},0);
+    if(sum!==0 && arr.length){ var idx=0,best=-1; arr.forEach(function(x,i){ if(Math.abs(x.c)>best){best=Math.abs(x.c);idx=i;} }); arr[idx].c-=sum; }
+    var debt=arr.filter(function(x){return x.c<0;}).map(function(x){return {name:x.name,c:x.c};});
+    var cred=arr.filter(function(x){return x.c>0;}).map(function(x){return {name:x.name,c:x.c};});
+    debt.sort(function(a,b){return a.c-b.c;}); cred.sort(function(a,b){return b.c-a.c;});
+    var tx=[],i=0,j=0;
+    while(i<debt.length && j<cred.length){
+      var give=Math.min(-debt[i].c, cred[j].c);
+      if(give>0) tx.push({ from:debt[i].name, to:cred[j].name, amt:give/100 });
+      debt[i].c+=give; cred[j].c-=give;
+      if(debt[i].c===0) i++; if(cred[j].c===0) j++;
+    }
+    return tx;
+  }
+
+  // ===== trips landing render =====
+  function renderTrips(list){
+    var box=$("tripList");
+    if(!list.length){ box.innerHTML='<p class="empty">No trips yet. Create your first one below.</p>'; return; }
+    box.innerHTML="";
+    list.forEach(function(name){
+      var row=document.createElement("div"); row.className="triprow";
+      var open=document.createElement("button"); open.className="tripopen"; open.textContent=name;
+      open.onclick=function(){ openTrip(name); };
+      var del=document.createElement("button"); del.className="tripdel"; del.setAttribute("aria-label","Delete "+name); del.textContent="\uD83D\uDDD1";
+      del.onclick=function(){ removeTrip(name); };
+      row.appendChild(open); row.appendChild(del); box.appendChild(row);
+    });
+  }
+
+  // ===== single trip render =====
+  function renderPeople(){
+    var box=$("peopleList");
+    if(!state.people.length){ box.innerHTML='<p class="empty">No one added yet.</p>'; return; }
+    box.innerHTML="";
+    state.people.forEach(function(p){
+      var chip=document.createElement("span"); chip.className="pchip";
+      var nm=document.createElement("span"); nm.textContent=p.name;
+      var x=document.createElement("button"); x.className="x"; x.setAttribute("aria-label","Remove "+p.name); x.textContent="\u00D7";
+      x.onclick=function(){ removePerson(p.id); };
+      chip.appendChild(nm); chip.appendChild(x); box.appendChild(chip);
+    });
+  }
+  function e
