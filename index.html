@@ -40,8 +40,6 @@
   .conn summary{cursor:pointer; font-size:12.5px; color:var(--brand)}
   .conn .help{font-size:12.5px; color:var(--ink-soft); margin-top:8px; line-height:1.7}
   .conn .help code{background:var(--chip); padding:1px 6px; border-radius:5px; font-size:12px}
-  .conn.compact{padding:9px 14px; margin-bottom:14px}
-  .conn.compact h2{display:none}
 
   .panel{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:18px}
   .panel + .panel{margin-top:18px}
@@ -130,16 +128,16 @@
     <span class="tag">shared trip expenses, saved to your Google Sheet</span>
   </header>
 
-  <section class="conn" id="connPanel">
+  <section class="conn">
     <div class="line">
       <h2>Google Sheet storage</h2>
       <span class="status" id="connStatus"><span class="dot warn">&#9679;</span> Not connected</span>
     </div>
-    <div class="line" style="margin-top:10px" id="connectRow">
+    <div class="line" style="margin-top:10px">
       <span class="grow"><input type="text" id="apiUrl" placeholder="Paste your Apps Script Web app URL (ends in /exec)" spellcheck="false"></span>
       <button class="btn sm" id="connectBtn" style="flex:0 0 auto">Connect</button>
     </div>
-    <details id="connectHelp">
+    <details>
       <summary>How do I get this URL?</summary>
       <div class="help">
         Open your Google Sheet, then <code>Extensions &rsaquo; Apps Script</code>. Paste the provided
@@ -251,7 +249,6 @@
   function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
   function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 
-  var hardcoded=!!(SHEET_API && SHEET_API.trim());
   var endpoint=(SHEET_API && SHEET_API.trim()) || lsGet(LS_URL) || "";
   var currentTrip=null;
   var state={ trip:"", cur:"\u20B9", people:[], expenses:[], payments:[], draftWeights:null };
@@ -439,6 +436,7 @@
     });
     showTable(box,t);
   }
+<<<<<<< HEAD
   function ensureDraft(){
     if(!state.draftWeights){ state.draftWeights={}; state.people.forEach(function(p){ state.draftWeights[p.id]=1; }); }
     Object.keys(state.draftWeights).forEach(function(id){ if(!personActive(id)) delete state.draftWeights[id]; });
@@ -778,3 +776,6 @@
 </script>
 </body>
 </html>
+=======
+  function e
+>>>>>>> parent of ac73f2b (Refactor HTML structure and improve accessibility)
