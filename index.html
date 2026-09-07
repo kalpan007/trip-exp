@@ -130,6 +130,8 @@
     <div class="line">
       <h2>Google Sheet storage</h2>
       <span class="status" id="connStatus"><span class="dot warn">&#9679;</span> Not connected</span>
+      <span style="flex:1"></span>
+      <button class="iconbtn" id="saveNow" title="Force a save to your Google Sheet">Save now</button>
     </div>
     <div class="line" style="margin-top:10px" id="connectRow">
       <span class="grow"><input type="text" id="apiUrl" placeholder="Paste your Apps Script Web app URL (ends in /exec)" spellcheck="false"></span>
@@ -257,6 +259,12 @@
   function nameOf(id){ var p=state.people.find(function(x){return x.id===id;}); return p?p.name:""; }
   function personActive(id){ return state.people.some(function(x){return x.id===id;}); }
   function validName(n){ return !!n && !/[:\\\/\?\*\[\]]/.test(n) && n.length<=90; }
+  function isoDate(ts){
+    var d=ts?new Date(ts):new Date();
+    if(isNaN(d.getTime())) d=new Date();
+    var m=("0"+(d.getMonth()+1)).slice(-2), day=("0"+d.getDate()).slice(-2);
+    return d.getFullYear()+"-"+m+"-"+day;
+  }
 
   function toPayload(){
     return { trip:currentTrip, cur:state.cur,
@@ -265,7 +273,7 @@
         return { desc:e.desc, amount:e.amount, paidBy:nameOf(e.paidBy), shares:e.shares.filter(personActive).map(nameOf), ts:e.ts };
       }),
       payments:state.payments.filter(function(p){ return personActive(p.from) && personActive(p.to); }).map(function(p){
-        return { ts:p.ts, from:nameOf(p.from), to:nameOf(p.to), amount:p.amount, note:p.note||"" };
+        return { date:p.date||isoDate(p.ts), ts:p.ts, from:nameOf(p.from), to:nameOf(p.to), amount:p.amount, note:p.note||"" };
       }) };
   }
   function fromPayload(d){
@@ -281,7 +289,10 @@
     }).filter(function(e){ return e.paidBy; });
     var py=Array.isArray(d.payments)?d.payments:[];
     state.payments=py.map(function(p){
-      return { id:uid(), from:map[p.from]||"", to:map[p.to]||"", amount:Number(p.amount||0), ts:Number(p.ts||0), note:String(p.note||"") };
+      var ts=Number(p.ts||0);
+      if(!ts && p.date){ var t=Date.parse(p.date); if(!isNaN(t)) ts=t; }
+      return { id:uid(), from:map[p.from]||"", to:map[p.to]||"", amount:Number(p.amount||0),
+               date:String(p.date||isoDate(ts)), ts:ts, note:String(p.note||"") };
     }).filter(function(p){ return p.from && p.to && p.amount>0; });
     state.draftShares=null;
   }
@@ -300,9 +311,17 @@
     return d;
   }
   async function apiSave(payload){
-    var res=await fetch(endpoint,{ method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"}, body:JSON.stringify(payload) });
+    var res=await fetch(endpoint,{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      redirect:"follow",
+      body:JSON.stringify(payload)
+    });
     if(!res.ok) throw new Error("HTTP "+res.status);
-    var d=await res.json(); if(d&&d.error) throw new Error(d.error);
+    var txt=await res.text();
+    var d=null;
+    try{ d=JSON.parse(txt); }catch(e){ d=null; }   // Apps Script may return a redirect page
+    if(d && d.error) throw new Error(d.error);
     return d;
   }
   async function apiDelete(name){
@@ -318,18 +337,42 @@
   }
 
   // ===== persistence for the open trip =====
-  var saving=false, pending=false;
-  async function persist(){
+  var saving=false, pending=false, saveTimer=null;
+
+  // debounce: typing in the currency box shouldn't fire a save per keystroke
+  function persist(){
     if(!currentTrip) return;
-    var payload=toPayload();
-    lsSet(LS_TRIP+currentTrip, JSON.stringify(payload));
-    if(!endpoint){ toast("Saved on this device"); return; }
+    lsSet(LS_TRIP+currentTrip, JSON.stringify(toPayload()));   // local copy is instant
+    if(!endpoint){ setStatus("warn","No sheet connected — saved on this device only"); return; }
+    setStatus("warn","Saving\u2026");
+    clearTimeout(saveTimer);
+    saveTimer=setTimeout(doPersist, 400);
+  }
+
+  async function doPersist(){
+    if(!currentTrip || !endpoint) return;
     if(saving){ pending=true; return; }
-    saving=true; setStatus("warn","Saving\u2026");
-    try{ await apiSave(payload); setStatus("ok","Saved to \u201C"+currentTrip+"\u201D"); }
-    catch(err){ setStatus("bad","Couldn't reach the sheet — saved locally"); toast("Save failed: "+err.message); }
+    saving=true;
+    var payload=toPayload();
+    try{
+      await apiSave(payload);
+      // confirm it really landed: read the trip back and compare counts
+      var check=await apiLoad(currentTrip);
+      var okPeople=(check.people||[]).length===payload.people.length;
+      var okExp=(check.expenses||[]).length===payload.expenses.length;
+      var okPay=(check.payments||[]).length===payload.payments.length;
+      if(okPeople && okExp && okPay){
+        setStatus("ok","Saved to your sheet \u00B7 "+new Date().toLocaleTimeString());
+      }else{
+        setStatus("bad","Sheet didn't confirm the save — kept a local copy");
+        toast("Save may not have landed. Check the Apps Script deployment.");
+      }
+    }catch(err){
+      setStatus("bad","Couldn't reach the sheet — saved locally");
+      toast("Save failed: "+err.message);
+    }
     saving=false;
-    if(pending){ pending=false; persist(); }
+    if(pending){ pending=false; doPersist(); }
   }
 
   // ===== calculations =====
@@ -489,7 +532,7 @@
       var w=document.createElement("div"); w.className="who";
       var d=document.createElement("div"); d.className="d"; d.textContent=nameOf(p.from)+" \u2192 "+nameOf(p.to);
       var m=document.createElement("div"); m.className="m";
-      m.textContent=p.ts?new Date(p.ts).toLocaleDateString():"";
+      m.textContent=p.date||(p.ts?new Date(p.ts).toLocaleDateString():"");
       w.appendChild(d); w.appendChild(m);
       var a=document.createElement("div"); a.className="amt"; a.textContent=money(p.amount);
       var x=document.createElement("button"); x.className="del"; x.setAttribute("aria-label","Delete payment"); x.textContent="\uD83D\uDDD1";
@@ -529,6 +572,8 @@
     if(!endpoint){ showApp(); renderApp(); return; }
     try{
       var d=await apiLoad(name);
+      // don't clobber edits made while this request was in flight
+      if(saving || saveTimer){ showApp(); setStatus("warn","Local changes pending\u2026"); return; }
       fromPayload(d); lsSet(LS_TRIP+name, JSON.stringify(toPayload()));
       renderApp(); showApp(); setStatus("ok","Opened \u201C"+name+"\u201D");
     }catch(err){
@@ -596,7 +641,8 @@
   function recordPayment(fromId, toId, amount, note){
     if(!fromId || !toId || fromId===toId){ toast("Pick two different people"); return; }
     if(!(amount>0)){ toast("Enter an amount"); return; }
-    state.payments.push({ id:uid(), from:fromId, to:toId, amount:Math.round(amount*100)/100, ts:Date.now(), note:note||"" });
+    var now=Date.now();
+    state.payments.push({ id:uid(), from:fromId, to:toId, amount:Math.round(amount*100)/100, ts:now, date:isoDate(now), note:note||"" });
     renderApp(); persist();
   }
   function addPaymentManual(){
@@ -629,6 +675,11 @@
     $("personInput").addEventListener("keydown",function(e){ if(e.key==="Enter") addPerson(); });
     $("addExpense").onclick=addExpense;
     $("exAmt").addEventListener("keydown",function(e){ if(e.key==="Enter") addExpense(); });
+    $("saveNow").onclick=function(){
+      if(!currentTrip){ toast("Open a trip first"); return; }
+      if(!endpoint){ toast("No sheet connected — set SHEET_API or use Connect"); return; }
+      clearTimeout(saveTimer); doPersist();
+    };
     $("addPayment").onclick=addPaymentManual;
     $("pyAmt").addEventListener("keydown",function(e){ if(e.key==="Enter") addPaymentManual(); });
     $("toggleAll").onclick=function(){ var all=state.draftShares.length===state.people.length; state.draftShares=all?[]:state.people.map(function(p){return p.id;}); renderExpenseForm(); };
@@ -637,16 +688,32 @@
       var a=document.activeElement, tags=["INPUT","SELECT","TEXTAREA"];
       if(endpoint && currentTrip && !saving && (!a || tags.indexOf(a.tagName)<0)) openTrip(currentTrip);
     });
+    // if a debounced save is still waiting when the tab is hidden/closed, fire it now
+    document.addEventListener("visibilitychange",function(){
+      if(document.visibilityState==="hidden" && saveTimer){ clearTimeout(saveTimer); doPersist(); }
+    });
+    window.addEventListener("pagehide",function(){
+      if(saveTimer){ clearTimeout(saveTimer); doPersist(); }
+    });
   }
 
   // ===== boot =====
   async function boot(){
-    if(!endpoint){ setStatus("warn","Not connected — paste your Web app URL"); showTrips(); return; }
+    if(!endpoint){
+      setStatus("bad","Not connected — data is NOT going to Google Sheets");
+      applyCompactReset();
+      showTrips(); return;
+    }
     $("apiUrl").value=endpoint;
     var list=await refreshTrips();
     showTrips();
     var last=lsGet(LS_LAST);
     if(last && list && list.indexOf(last)>=0){ openTrip(last); }
+  }
+  function applyCompactReset(){
+    $("connectRow").hidden=false;
+    $("connectHelp").hidden=false;
+    $("connPanel").classList.remove("compact");
   }
   function applyCompact(){
     if(!hardcoded) return;
