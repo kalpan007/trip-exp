@@ -102,6 +102,17 @@
   .pay .from{font-weight:600} .pay .arrow{color:var(--amber); font-weight:700}
   .pay .to{font-weight:600; flex:1} .pay .pa{font-weight:700; font-variant-numeric:tabular-nums; color:#fff}
   .settled{color:#C9BBE4; font-size:14px; padding:6px 0}
+  .pay .mark{border:1px solid rgba(255,255,255,.35); background:transparent; color:#F3EEFA;
+    border-radius:8px; padding:5px 10px; font-size:12.5px; cursor:pointer; font-family:var(--sans); white-space:nowrap}
+  .pay .mark:hover{background:rgba(255,255,255,.14); border-color:var(--amber); color:#fff}
+  .payrow{display:flex; align-items:center; gap:10px; padding:11px 2px; border-top:1px solid var(--line)}
+  .payrow:first-of-type{border-top:none}
+  .payrow .who{flex:1; min-width:0}
+  .payrow .who .d{font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .payrow .who .m{font-size:12.5px; color:var(--ink-soft)}
+  .payrow .amt{font-weight:600; font-variant-numeric:tabular-nums; color:var(--pos); white-space:nowrap}
+  .payrow .del{border:none; background:transparent; color:var(--ink-soft); cursor:pointer; font-size:16px; padding:6px}
+  .payrow .del:hover{color:var(--neg)}
   .foot{color:var(--ink-soft); font-size:12.5px; margin-top:24px; text-align:center; line-height:1.7}
   #toast{position:fixed; left:50%; bottom:22px; transform:translateX(-50%) translateY(20px); background:var(--ink); color:#fff; padding:10px 16px; border-radius:999px; font-size:13.5px; opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; z-index:50}
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
@@ -193,8 +204,23 @@
         </section>
         <section class="panel settle">
           <h2>Settle up</h2>
-          <p class="sub">The fewest payments to square everyone up.</p>
+          <p class="sub">What's still outstanding. Tap "Mark as paid" once a payment actually happens.</p>
           <div id="settle"><p class="settled">Nothing to settle yet.</p></div>
+        </section>
+        <section class="panel">
+          <h2>Payments made</h2>
+          <p class="sub">Real payments already sent. These reduce the balances above.</p>
+          <div id="payList"><p class="empty">No payments recorded yet.</p></div>
+          <div id="payForm" hidden style="margin-top:14px">
+            <div class="row">
+              <div><label for="pyFrom">Who pays</label><select id="pyFrom"></select></div>
+              <div><label for="pyTo">Pays to</label><select id="pyTo"></select></div>
+            </div>
+            <div class="row" style="margin-top:12px">
+              <div><label for="pyAmt">Amount</label><input type="number" id="pyAmt" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
+              <div style="display:flex; align-items:flex-end"><button class="btn" id="addPayment" style="width:100%">Record payment</button></div>
+            </div>
+          </div>
         </section>
       </div>
     </div>
@@ -221,7 +247,7 @@
   var hardcoded=!!(SHEET_API && SHEET_API.trim());
   var endpoint=(SHEET_API && SHEET_API.trim()) || lsGet(LS_URL) || "";
   var currentTrip=null;
-  var state={ trip:"", cur:"\u20B9", people:[], expenses:[], draftShares:null };
+  var state={ trip:"", cur:"\u20B9", people:[], expenses:[], payments:[], draftShares:null };
 
   var uid=function(){ return (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
               : Date.now().toString(36)+Math.random().toString(36).slice(2,8); };
@@ -237,6 +263,9 @@
       people:state.people.map(function(p){return p.name;}),
       expenses:state.expenses.map(function(e){
         return { desc:e.desc, amount:e.amount, paidBy:nameOf(e.paidBy), shares:e.shares.filter(personActive).map(nameOf), ts:e.ts };
+      }),
+      payments:state.payments.filter(function(p){ return personActive(p.from) && personActive(p.to); }).map(function(p){
+        return { ts:p.ts, from:nameOf(p.from), to:nameOf(p.to), amount:p.amount, note:p.note||"" };
       }) };
   }
   function fromPayload(d){
@@ -250,6 +279,10 @@
       var shares=(Array.isArray(e.shares)?e.shares:[]).map(function(n){return map[n];}).filter(Boolean);
       return { id:uid(), desc:String(e.desc||""), amount:Number(e.amount||0), paidBy:map[e.paidBy]||"", shares:shares, ts:Number(e.ts||0) };
     }).filter(function(e){ return e.paidBy; });
+    var py=Array.isArray(d.payments)?d.payments:[];
+    state.payments=py.map(function(p){
+      return { id:uid(), from:map[p.from]||"", to:map[p.to]||"", amount:Number(p.amount||0), ts:Number(p.ts||0), note:String(p.note||"") };
+    }).filter(function(p){ return p.from && p.to && p.amount>0; });
     state.draftShares=null;
   }
 
@@ -301,26 +334,35 @@
 
   // ===== calculations =====
   function computeBalances(){
-    var paid={}, share={};
-    state.people.forEach(function(p){ paid[p.id]=0; share[p.id]=0; });
+    var paid={}, share={}, made={}, got={};
+    state.people.forEach(function(p){ paid[p.id]=0; share[p.id]=0; made[p.id]=0; got[p.id]=0; });
     state.expenses.forEach(function(e){
       var parts=e.shares.filter(personActive);
       if(personActive(e.paidBy)) paid[e.paidBy]+=e.amount;
       if(parts.length){ var per=e.amount/parts.length; parts.forEach(function(id){ share[id]+=per; }); }
     });
-    return state.people.map(function(p){ return { id:p.id, name:p.name, paid:paid[p.id], share:share[p.id], net:paid[p.id]-share[p.id] }; });
+    state.payments.forEach(function(p){
+      if(personActive(p.from)) made[p.from]+=p.amount;
+      if(personActive(p.to))   got[p.to]  +=p.amount;
+    });
+    // remaining net = original net + what they've paid out - what they've received
+    return state.people.map(function(p){
+      var orig=paid[p.id]-share[p.id];
+      return { id:p.id, name:p.name, paid:paid[p.id], share:share[p.id],
+               made:made[p.id], got:got[p.id], orig:orig, net:orig+made[p.id]-got[p.id] };
+    });
   }
   function computeSettlement(bals){
-    var arr=bals.map(function(b){ return { name:b.name, c:Math.round(b.net*100) }; });
+    var arr=bals.map(function(b){ return { id:b.id, name:b.name, c:Math.round(b.net*100) }; });
     var sum=arr.reduce(function(s,x){return s+x.c;},0);
     if(sum!==0 && arr.length){ var idx=0,best=-1; arr.forEach(function(x,i){ if(Math.abs(x.c)>best){best=Math.abs(x.c);idx=i;} }); arr[idx].c-=sum; }
-    var debt=arr.filter(function(x){return x.c<0;}).map(function(x){return {name:x.name,c:x.c};});
-    var cred=arr.filter(function(x){return x.c>0;}).map(function(x){return {name:x.name,c:x.c};});
+    var debt=arr.filter(function(x){return x.c<0;}).map(function(x){return {id:x.id,name:x.name,c:x.c};});
+    var cred=arr.filter(function(x){return x.c>0;}).map(function(x){return {id:x.id,name:x.name,c:x.c};});
     debt.sort(function(a,b){return a.c-b.c;}); cred.sort(function(a,b){return b.c-a.c;});
     var tx=[],i=0,j=0;
     while(i<debt.length && j<cred.length){
       var give=Math.min(-debt[i].c, cred[j].c);
-      if(give>0) tx.push({ from:debt[i].name, to:cred[j].name, amt:give/100 });
+      if(give>0) tx.push({ fromId:debt[i].id, from:debt[i].name, toId:cred[j].id, to:cred[j].name, amt:give/100 });
       debt[i].c+=give; cred[j].c-=give;
       if(debt[i].c===0) i++; if(cred[j].c===0) j++;
     }
@@ -399,7 +441,11 @@
       var nm=document.createElement("div"); nm.className="nm"; nm.textContent=b.name;
       var cls=Math.abs(b.net)<0.005?"zero":(b.net>0?"pos":"neg");
       var net=document.createElement("div"); net.className="net "+cls; net.textContent=(b.net>0.005?"+":"")+money(b.net);
-      var meta=document.createElement("div"); meta.className="meta"; meta.textContent="paid "+money(b.paid)+" \u00B7 share "+money(b.share);
+      var meta=document.createElement("div"); meta.className="meta";
+      var txt="paid "+money(b.paid)+" \u00B7 share "+money(b.share);
+      if(b.made>0.005) txt+=" \u00B7 sent "+money(b.made);
+      if(b.got>0.005)  txt+=" \u00B7 received "+money(b.got);
+      meta.textContent=txt;
       var stat=document.createElement("div"); stat.className="meta "+cls; stat.style.textAlign="right";
       stat.textContent=Math.abs(b.net)<0.005?"settled up":(b.net>0?"gets back":"owes");
       row.appendChild(nm); row.appendChild(net); row.appendChild(meta); row.appendChild(stat); box.appendChild(row);
@@ -417,13 +463,44 @@
       var ar=document.createElement("span"); ar.className="arrow"; ar.textContent="\u2192";
       var to=document.createElement("span"); to.className="to"; to.textContent=t.to;
       var pa=document.createElement("span"); pa.className="pa"; pa.textContent=money(t.amt);
-      row.appendChild(f); row.appendChild(ar); row.appendChild(to); row.appendChild(pa); box.appendChild(row);
+      var mk=document.createElement("button"); mk.className="mark"; mk.textContent="Mark as paid";
+      mk.onclick=function(){ recordPayment(t.fromId, t.toId, t.amt, "settled"); };
+      row.appendChild(f); row.appendChild(ar); row.appendChild(to); row.appendChild(pa); row.appendChild(mk);
+      box.appendChild(row);
+    });
+  }
+
+  function renderPayments(){
+    var box=$("payList");
+    var enough=state.people.length>=2;
+    $("payForm").hidden=!enough;
+    if(enough){
+      [["pyFrom",0],["pyTo",1]].forEach(function(pair){
+        var sel=$(pair[0]); var prev=sel.value; sel.innerHTML="";
+        state.people.forEach(function(p){ var o=document.createElement("option"); o.value=p.id; o.textContent=p.name; sel.appendChild(o); });
+        if(state.people.some(function(p){return p.id===prev;})) sel.value=prev;
+        else if(state.people[pair[1]]) sel.value=state.people[pair[1]].id;
+      });
+    }
+    if(!state.payments.length){ box.innerHTML='<p class="empty">No payments recorded yet.</p>'; return; }
+    box.innerHTML="";
+    state.payments.slice().reverse().forEach(function(p){
+      var row=document.createElement("div"); row.className="payrow";
+      var w=document.createElement("div"); w.className="who";
+      var d=document.createElement("div"); d.className="d"; d.textContent=nameOf(p.from)+" \u2192 "+nameOf(p.to);
+      var m=document.createElement("div"); m.className="m";
+      m.textContent=p.ts?new Date(p.ts).toLocaleDateString():"";
+      w.appendChild(d); w.appendChild(m);
+      var a=document.createElement("div"); a.className="amt"; a.textContent=money(p.amount);
+      var x=document.createElement("button"); x.className="del"; x.setAttribute("aria-label","Delete payment"); x.textContent="\uD83D\uDDD1";
+      x.onclick=function(){ deletePayment(p.id); };
+      row.appendChild(w); row.appendChild(a); row.appendChild(x); box.appendChild(row);
     });
   }
   function renderApp(){
     $("currentTripName").textContent=currentTrip||"";
     $("curInput").value=state.cur;
-    renderPeople(); renderExpenseForm(); renderExpenses(); renderBalances(); renderSettle();
+    renderPeople(); renderExpenseForm(); renderExpenses(); renderBalances(); renderSettle(); renderPayments();
   }
 
   // ===== views =====
@@ -465,7 +542,7 @@
     var existing=[]; try{ existing=JSON.parse(lsGet(LS_TRIPS)||"[]"); }catch(e){}
     if(existing.some(function(t){return t.toLowerCase()===name.toLowerCase();})){ toast("That trip already exists"); return; }
     inp.value="";
-    currentTrip=name; state={ trip:name, cur:"\u20B9", people:[], expenses:[], draftShares:null };
+    currentTrip=name; state={ trip:name, cur:"\u20B9", people:[], expenses:[], payments:[], draftShares:null };
     if(!endpoint){ lsSet(LS_TRIP+name, JSON.stringify(toPayload())); openTrip(name); return; }
     setStatus("warn","Creating \u201C"+name+"\u201D\u2026");
     try{
@@ -496,6 +573,7 @@
   function removePerson(id){
     var used=state.expenses.some(function(e){ return e.paidBy===id || e.shares.indexOf(id)>=0; });
     if(used){ toast("Delete their expenses first"); return; }
+    if(state.payments.some(function(p){ return p.from===id || p.to===id; })){ toast("Delete their payments first"); return; }
     state.people=state.people.filter(function(p){return p.id!==id;});
     if(state.draftShares) state.draftShares=state.draftShares.filter(function(x){return x!==id;});
     renderApp(); persist();
@@ -514,6 +592,20 @@
     renderApp(); persist(); $("exDesc").focus();
   }
   function deleteExpense(id){ state.expenses=state.expenses.filter(function(e){return e.id!==id;}); renderApp(); persist(); }
+
+  function recordPayment(fromId, toId, amount, note){
+    if(!fromId || !toId || fromId===toId){ toast("Pick two different people"); return; }
+    if(!(amount>0)){ toast("Enter an amount"); return; }
+    state.payments.push({ id:uid(), from:fromId, to:toId, amount:Math.round(amount*100)/100, ts:Date.now(), note:note||"" });
+    renderApp(); persist();
+  }
+  function addPaymentManual(){
+    var amt=parseFloat($("pyAmt").value);
+    if(!(amt>0)){ toast("Enter an amount"); $("pyAmt").focus(); return; }
+    recordPayment($("pyFrom").value, $("pyTo").value, amt, "");
+    $("pyAmt").value="";
+  }
+  function deletePayment(id){ state.payments=state.payments.filter(function(p){return p.id!==id;}); renderApp(); persist(); }
 
   // ===== toast =====
   var toastT;
@@ -537,6 +629,8 @@
     $("personInput").addEventListener("keydown",function(e){ if(e.key==="Enter") addPerson(); });
     $("addExpense").onclick=addExpense;
     $("exAmt").addEventListener("keydown",function(e){ if(e.key==="Enter") addExpense(); });
+    $("addPayment").onclick=addPaymentManual;
+    $("pyAmt").addEventListener("keydown",function(e){ if(e.key==="Enter") addPaymentManual(); });
     $("toggleAll").onclick=function(){ var all=state.draftShares.length===state.people.length; state.draftShares=all?[]:state.people.map(function(p){return p.id;}); renderExpenseForm(); };
     $("curInput").addEventListener("input",function(){ state.cur=(this.value||"").trim()||"\u20B9"; renderExpenses(); renderBalances(); renderSettle(); persist(); });
     window.addEventListener("focus",function(){
