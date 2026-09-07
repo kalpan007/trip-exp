@@ -1,0 +1,7 @@
+# local agent/tooling state, not part of the app
+.claude/
+.claude-flow/
+
+# OS cruft
+.DS_Store
+Thumbs.db
