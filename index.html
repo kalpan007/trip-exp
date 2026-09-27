@@ -89,7 +89,7 @@
     }
   }
   :root{
-    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     --serif:"Fraunces",Georgia,"Times New Roman",serif;
     /* fixed rem scale, ratio ~1.2 — product UI, not fluid brand type */
     --t-xs:0.75rem; --t-sm:0.8125rem; --t-md:0.875rem; --t-base:0.9375rem;
@@ -257,15 +257,15 @@
   .hero.credit{--hero-wash:var(--credit-soft)}
   .hero.debit{--hero-wash:var(--debit-soft)}
   .hero.flat{--hero-wash:var(--brand-soft)}
-  .hero .inner{position:relative}
+  .hero .inner{position:relative; z-index:1}
   .hero .who{display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:14px}
   .hero .who label{margin:0; font-size:var(--t-xs); color:var(--ink-3); font-weight:500}
   .hero .who select{width:auto; min-width:120px; max-width:200px; min-height:34px; padding:5px 30px 5px 10px;
     font-size:var(--t-md); font-weight:600; background:var(--sunken); border-color:var(--line);
     background-position:calc(100% - 14px) calc(50% + 1px), calc(100% - 9px) calc(50% + 1px)}
   .hero .caption{font-size:var(--t-md); color:var(--ink-2); margin:0 0 2px}
-  .hero .figure{font-family:var(--serif); font-weight:700; font-size:var(--t-hero);
-    line-height:1.05; letter-spacing:-.035em; margin:0; word-break:break-word}
+  .hero .figure{font-family:var(--sans); font-weight:650; font-size:var(--t-hero);
+    line-height:1.05; letter-spacing:-.03em; margin:0; word-break:break-word}
   .hero.credit .figure{color:var(--credit)}
   .hero.debit .figure{color:var(--debit)}
   .hero .detail{font-size:var(--t-md); color:var(--ink-2); margin:8px 0 0}
@@ -290,6 +290,20 @@
     background:var(--sunken); color:var(--ink-2)}
   .tabbar button[aria-selected="true"] .count{background:color-mix(in srgb, var(--on-brand) 20%, transparent); color:var(--on-brand)}
   .tabpanel[data-active="false"]{display:none}
+  @media(max-width:420px){
+    .tabbar button > svg{display:none}
+    .tabbar button{flex:1 1 auto; min-width:0; padding:10px 4px}
+  }
+  @media(max-width:380px){
+    .tabbar{gap:2px}
+    .tabbar button{font-size:var(--t-xs)}
+    .tabbar .count{display:none}
+  }
+  kbd{font-family:var(--sans); font-size:.6875rem; font-weight:600; color:var(--ink-3); line-height:1;
+    background:var(--surface); border:1px solid var(--line-strong); border-bottom-width:2px;
+    border-radius:5px; padding:2px 5px; min-width:18px; text-align:center; display:inline-block}
+  .tabbar kbd{display:none}
+  .sidehelp{display:none}
 
   /* ── People ───────────────────────────────────────────────────────────── */
   .people{display:flex; flex-wrap:wrap; gap:7px; margin-top:14px}
@@ -382,6 +396,20 @@
   .blegend span{display:inline-flex; align-items:center; gap:6px}
   .blegend i{width:9px; height:9px; border-radius:3px; display:inline-block}
 
+  .bbar{cursor:default}
+  .bbar:focus-visible{outline-offset:3px}
+  .bbar:hover .fill, .bbar:focus-visible .fill{filter:brightness(1.12)}
+  .tip{position:fixed; z-index:70; pointer-events:none; min-width:180px; max-width:260px;
+    background:var(--surface); color:var(--ink); border:1px solid var(--line-strong);
+    border-radius:var(--r-md); box-shadow:var(--shadow-lg); padding:10px 12px; font-size:var(--t-sm)}
+  .tip .v{font-size:var(--t-lg); font-weight:700; letter-spacing:-.01em}
+  .tip .k{display:flex; align-items:center; gap:7px; color:var(--ink-2); margin-top:1px}
+  .tip .k i{width:12px; height:3px; border-radius:2px; display:inline-block}
+  .tip .r{display:flex; justify-content:space-between; gap:14px; color:var(--ink-3); margin-top:6px;
+    padding-top:6px; border-top:1px solid var(--line)}
+  .tip .r + .r{margin-top:0; padding-top:2px; border-top:none}
+  .tip .r b{color:var(--ink); font-weight:600}
+
   /* ── Settle ───────────────────────────────────────────────────────────── */
   .txrow{display:flex; align-items:center; gap:10px; padding:12px 0; border-top:1px solid var(--line)}
   .txrow:first-child{border-top:none}
@@ -389,6 +417,8 @@
   .txrow .who{font-weight:600}
   .txrow .who.me{color:var(--brand-ink)}
   .txrow svg.arrow{stroke:var(--ink-3)}
+  .txrow .ktag{font-size:var(--t-xs); font-weight:600; color:var(--brand-ink); background:var(--brand-soft);
+    border-radius:99px; padding:1px 8px}
   .txrow .amt{font-weight:700; letter-spacing:-.01em; white-space:nowrap}
   .allsquare{text-align:center; padding:26px 18px; border-radius:var(--r-md);
     background:var(--credit-soft); border:1px solid var(--line)}
@@ -397,6 +427,26 @@
   .totalline{display:flex; justify-content:space-between; align-items:baseline; gap:12px;
     margin-top:14px; padding-top:13px; border-top:1px solid var(--line); font-size:var(--t-md); color:var(--ink-3)}
   .totalline b{font-size:var(--t-lg); font-weight:700; color:var(--ink); letter-spacing:-.01em}
+
+  /* ── Kitty (collection) ───────────────────────────────────────────────── */
+  .kstats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+  .kstat{background:var(--sunken); border:1px solid var(--line); border-radius:var(--r-md); padding:12px 10px; min-width:0}
+  .kstat span{display:block; font-size:var(--t-xs); color:var(--ink-3); font-weight:600}
+  .kstat b{display:block; font-size:var(--t-lg); font-weight:700; letter-spacing:-.01em; margin-top:2px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .kstat.left{background:var(--credit-soft)} .kstat.left b{color:var(--credit)}
+  .kstat.over{background:var(--debit-soft)} .kstat.over b{color:var(--debit)}
+  .kmeter{height:8px; margin-top:12px; border-radius:4px; background:color-mix(in srgb, var(--brand) 16%, var(--surface)); overflow:hidden}
+  .kmeter span{display:block; height:100%; background:var(--brand)}
+  .kmeter.over span{background:var(--debit)}
+  .knote{font-size:var(--t-sm); color:var(--ink-3); margin:8px 0 0}
+  @media(max-width:520px){
+    .kstats{grid-template-columns:1fr; gap:6px}
+    .kstat{display:flex; align-items:baseline; justify-content:space-between; padding:10px 12px}
+    .kstat b{margin-top:0}
+  }
+  .kholders{margin-top:12px}
+  .kholders .txrow{font-size:var(--t-md)}
 
   /* ── Toast ────────────────────────────────────────────────────────────── */
   #toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom));
@@ -410,19 +460,84 @@
   .foot{color:var(--ink-3); font-size:var(--t-sm); margin-top:28px; text-align:center; line-height:1.8; max-width:62ch;
     margin-left:auto; margin-right:auto}
 
-  /* ── Desktop: no tabs, two columns ────────────────────────────────────── */
-  .cols{display:grid; grid-template-columns:1fr; gap:14px}
+  /* ── Desktop (Windows / Mac, mouse + keyboard) ─────────────────────────
+     One section at a time, each laid out in two columns, instead of every
+     section stacked into one long page. From 1180px the tabs become a
+     sticky sidebar.                                                        */
+  .cols{display:block}
   @media(min-width:960px){
-    .tabbar{display:none}
-    .tabpanel[data-active="false"]{display:block}
-    .cols{grid-template-columns:1.05fr .95fr; align-items:start; gap:16px}
-    .colA{grid-column:1; grid-row:1} .colB{grid-column:2; grid-row:1}
-    .hero{padding:26px}
+    .wrap{max-width:1440px; display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:12px}
+    .wrap > *{grid-column:1 / -1}
+    /* with the sheet URL built in, the sync status joins the masthead row */
+    .wrap > .masthead{grid-column:1; grid-row:1}
+    .wrap > .conn.compact{grid-column:2; grid-row:1; align-self:center; margin:0}
+    .hero{padding:24px 26px}
+    .hero .inner{display:grid; grid-template-columns:minmax(0,1fr) auto; gap:28px; align-items:center}
+    .hero .totals{margin:0; padding:0 0 0 28px; border-top:none; border-left:1px solid var(--line);
+      display:grid; grid-template-columns:repeat(2,minmax(140px,auto)); gap:14px 28px; align-self:stretch; align-content:center}
     :root{--t-hero:3.25rem}
+
+    /* denser, mouse-sized controls; 16px inputs only matter for iOS zoom */
+    input[type=text],input[type=number],select{font-size:var(--t-base); min-height:40px; padding:9px 12px}
+    .btn{min-height:40px; padding:9px 15px}
+
+    .tabpanel{display:grid; gap:16px; align-items:start}
+    .tabpanel > .panel + .panel{margin-top:0}
+    #panel-log{grid-template-columns:minmax(360px,440px) minmax(0,1fr)}
+    #panel-log > #peoplePanel{grid-column:1; grid-row:1}
+    #panel-log > #expPanel{grid-column:1; grid-row:2}
+    #panel-log > #logPanel{grid-column:2; grid-row:1 / span 2}
+    #panel-kit, #panel-set{grid-template-columns:repeat(2,minmax(0,1fr))}
+    #panel-bal{grid-template-columns:minmax(0,1fr)}
+
+    /* balances read as one diverging chart: name · bar · amount */
+    .brow{display:grid; grid-template-columns:minmax(220px,320px) minmax(0,1fr) 130px;
+      grid-template-areas:"top bar net" "meta bar net"; column-gap:20px; align-items:center; padding:12px 0}
+    .brow .bmeta{grid-area:meta}
+    .brow .btop{display:block; grid-area:top; min-width:0}
+    .brow .btop .net{display:none}
+    .brow .bbar{grid-area:bar; margin-top:0; height:14px}
+    .brow .dnet{grid-area:net; text-align:right; font-weight:700; letter-spacing:-.01em; font-size:var(--t-lg)}
+
+    .lrow{padding:12px 10px; margin:0 -10px}
   }
-  @media(max-width:959px){
-    .cols{display:block}
-    .colB{margin-top:0}
+  .brow .dnet{display:none}
+  @media(min-width:960px){ .brow .dnet{display:block} }
+  .dnet.credit{color:var(--credit)} .dnet.debit{color:var(--debit)} .dnet.flat{color:var(--ink-3)}
+
+  @media(min-width:1180px){
+    #appView{display:grid; grid-template-columns:216px minmax(0,1fr); column-gap:24px;
+      grid-template-areas:"bar bar" "side hero" "side cols"}
+    #appView > .appbar{grid-area:bar}
+    #appView > .hero{grid-area:hero}
+    #appView > .cols{grid-area:cols}
+    .side{grid-area:side; position:sticky; top:16px; align-self:start}
+    .tabbar{position:static; flex-direction:column; gap:2px; padding:6px; margin:0;
+      background:var(--surface); box-shadow:var(--shadow-sm); backdrop-filter:none; -webkit-backdrop-filter:none}
+    .tabbar button{justify-content:flex-start; gap:10px; padding:10px 12px; font-size:var(--t-md)}
+    .tabbar button .lbl{flex:1; text-align:left}
+    .tabbar button > svg{display:block}
+    .tabbar kbd{display:inline-block}
+    .tabbar button[aria-selected="true"] kbd{background:transparent; color:var(--on-brand);
+      border-color:color-mix(in srgb, var(--on-brand) 40%, transparent)}
+    .sidehelp{display:block; margin-top:14px; padding:12px 14px; font-size:var(--t-xs); color:var(--ink-3);
+      border:1px dashed var(--line-strong); border-radius:var(--r-md)}
+    .sidehelp p{margin:0; display:flex; align-items:center; gap:4px}
+    .sidehelp p + p{margin-top:7px}
+    .sidehelp p kbd:last-of-type{margin-right:4px}
+  }
+  #tripsView{max-width:720px; margin-left:auto; margin-right:auto}
+
+  /* ── Windows High Contrast / forced colours ───────────────────────────── */
+  @media (forced-colors:active){
+    .bbar .fill, .kmeter span{forced-color-adjust:none; background:Highlight}
+    .bbar .fill.debit, .kmeter.over span{background:CanvasText}
+    .bbar, .kmeter{border-color:CanvasText}
+    .tabbar button[aria-selected="true"]{outline:2px solid Highlight}
+    .srow:not(.off) .box{forced-color-adjust:none; background:Highlight; color:HighlightText; border-color:Highlight}
+    .blegend i{forced-color-adjust:none}
+    .blegend span:first-child i{background:CanvasText !important}
+    .blegend span:last-child i{background:Highlight !important}
   }
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{transition-duration:1ms !important; animation-duration:1ms !important; animation-iteration-count:1 !important}
@@ -449,6 +564,7 @@
   <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M18.7 5.3l-1.4 1.4M6.7 17.3l-1.4 1.4"/></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4 8.2 8.2 0 1 0 20 14.2z"/></symbol>
   <symbol id="i-auto" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v17a8.5 8.5 0 0 0 0-17z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-jar" viewBox="0 0 24 24"><path d="M8 3.5h8M9 3.5V6c0 .6-.4 1.1-.9 1.4A5 5 0 0 0 5.5 12v5.5A3 3 0 0 0 8.5 20.5h7a3 3 0 0 0 3-3V12a5 5 0 0 0-2.6-4.6c-.5-.3-.9-.8-.9-1.4V3.5"/><path d="M5.5 12.5h13"/></symbol>
   <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 20H5a1.5 1.5 0 0 1-1.5-1.5v-13A1.5 1.5 0 0 1 5 4h11l4.5 4.5v10A1.5 1.5 0 0 1 19 20z"/><path d="M8 4v5h7M8 20v-5h8v5"/></symbol>
 </defs></svg>
 
@@ -507,31 +623,42 @@
     <!-- Hero: the one number that matters -->
     <section class="hero flat" id="hero" aria-live="polite">
       <div class="inner">
+       <div class="hmain">
         <div class="who">
           <label for="meSelect">I&rsquo;m</label>
           <select id="meSelect" aria-label="Which person are you"></select>
         </div>
         <p class="caption" id="heroCaption">Add people and an expense to see where you stand.</p>
-        <p class="figure num" id="heroFigure">—</p>
+        <p class="figure" id="heroFigure">—</p>
         <p class="detail" id="heroDetail"></p>
         <div class="cta" id="heroCta"></div>
+       </div>
         <div class="totals" id="heroTotals" hidden></div>
       </div>
     </section>
 
+    <aside class="side">
     <nav class="tabbar" role="tablist" aria-label="Trip sections">
       <button role="tab" id="tab-log" aria-controls="panel-log" aria-selected="true" data-tab="log">
-        <svg class="i sm" aria-hidden="true"><use href="#i-receipt"/></svg>Expenses<span class="count num" id="cLog">0</span></button>
+        <svg class="i sm" aria-hidden="true"><use href="#i-receipt"/></svg><span class="lbl">Expenses</span><span class="count num" id="cLog">0</span><kbd>1</kbd></button>
       <button role="tab" id="tab-bal" aria-controls="panel-bal" aria-selected="false" data-tab="bal">
-        <svg class="i sm" aria-hidden="true"><use href="#i-scales"/></svg>Balances</button>
+        <svg class="i sm" aria-hidden="true"><use href="#i-scales"/></svg><span class="lbl">Balances</span><kbd>2</kbd></button>
+      <button role="tab" id="tab-kit" aria-controls="panel-kit" aria-selected="false" data-tab="kit">
+        <svg class="i sm" aria-hidden="true"><use href="#i-jar"/></svg><span class="lbl">Contribution</span><kbd>3</kbd></button>
       <button role="tab" id="tab-set" aria-controls="panel-set" aria-selected="false" data-tab="set">
-        <svg class="i sm" aria-hidden="true"><use href="#i-swap"/></svg>Settle<span class="count num" id="cSet">0</span></button>
+        <svg class="i sm" aria-hidden="true"><use href="#i-swap"/></svg><span class="lbl">Settle</span><span class="count num" id="cSet">0</span><kbd>4</kbd></button>
     </nav>
+    <div class="sidehelp" aria-label="Keyboard shortcuts">
+      <p><kbd>N</kbd> new expense</p>
+      <p><kbd>1</kbd>–<kbd>4</kbd> switch section</p>
+      <p><kbd>Ctrl</kbd> <kbd>S</kbd> save to sheet</p>
+    </div>
+    </aside>
 
     <div class="cols">
       <!-- ── Column A / Tab: Expenses ── -->
       <div class="colA tabpanel" id="panel-log" role="tabpanel" aria-labelledby="tab-log" data-active="true">
-        <section class="panel">
+        <section class="panel" id="peoplePanel">
           <div class="phead">
             <div>
               <h2><svg class="i sm" aria-hidden="true"><use href="#i-users"/></svg>Who&rsquo;s on the trip</h2>
@@ -582,7 +709,7 @@
           </div>
         </section>
 
-        <section class="panel">
+        <section class="panel" id="logPanel">
           <div class="phead">
             <div><h2>Logged expenses</h2></div>
             <span class="num" id="expTotal" style="font-weight:700; letter-spacing:-.01em"></span>
@@ -602,6 +729,42 @@
               </div>
             </div>
             <div class="bals" id="balances"></div>
+          </section>
+        </div>
+
+        <div class="tabpanel" id="panel-kit" role="tabpanel" aria-labelledby="tab-kit" data-active="false">
+          <section class="panel">
+            <div class="phead">
+              <div>
+                <h2><svg class="i sm" aria-hidden="true"><use href="#i-jar"/></svg>Contribution</h2>
+                <p class="sub">Money everyone put in up front. Spent counts every expense paid by whoever collected it.</p>
+              </div>
+            </div>
+            <div id="kitty"></div>
+          </section>
+
+          <section class="panel">
+            <div class="phead">
+              <div>
+                <h2>Who put in</h2>
+                <p class="sub">Add your own share too, so the total matches the cash in hand.</p>
+              </div>
+            </div>
+            <div class="rows" id="kitList"></div>
+            <div id="kitForm" hidden style="margin-top:14px; padding-top:14px; border-top:1px solid var(--line)">
+              <div class="row">
+                <div><label for="kitFrom">Who put in</label><select id="kitFrom"></select></div>
+                <div><label for="kitTo">Collected by</label><select id="kitTo"></select></div>
+              </div>
+              <div class="field" style="margin-top:12px">
+                <label for="kitAmt">Amount</label>
+                <input type="number" id="kitAmt" inputmode="decimal" min="0" step="0.01" placeholder="0.00">
+              </div>
+              <div class="row" style="margin-top:12px">
+                <button class="btn" id="kitAdd"><svg class="i sm" aria-hidden="true"><use href="#i-plus"/></svg>Add</button>
+                <button class="btn ghost" id="kitAll"><svg class="i sm" aria-hidden="true"><use href="#i-users"/></svg>Add for everyone</button>
+              </div>
+            </div>
           </section>
         </div>
 
@@ -701,6 +864,13 @@
     return n;
   }
 
+  // ===== kitty =====
+  // A contribution to the kitty is stored as a payment with this note, made to
+  // whoever holds the money. The holder's own contribution is a payment to
+  // themselves: it moves no balance but keeps the kitty totals honest.
+  var KITTY="collection";
+  function isKitty(p){ return p.note===KITTY; }
+
   // ===== expense split helpers =====
   // weights maps personId -> positive number. Participants are the keys with w > 0.
   function partsOf(e){
@@ -767,7 +937,7 @@
       if(!ts && p.date){ var t=Date.parse(p.date); if(!isNaN(t)) ts=t; }
       return { id:uid(), from:map[p.from]||"", to:map[p.to]||"", amount:Number(p.amount||0),
                date:String(p.date||isoDate(ts)), ts:ts, note:String(p.note||"") };
-    }).filter(function(p){ return p.from && p.to && p.from!==p.to && p.amount>0; });
+    }).filter(function(p){ return p.from && p.to && (p.from!==p.to || isKitty(p)) && p.amount>0; });
     state.draft=null;
   }
   // did the backend keep our weights? (silent loss would revert splits to equal)
@@ -865,20 +1035,31 @@
 
   // ===== calculations =====
   function computeBalances(){
-    var paid={}, share={}, made={}, got={};
-    state.people.forEach(function(p){ paid[p.id]=0; share[p.id]=0; made[p.id]=0; got[p.id]=0; });
+    // kitty money is kept apart from settle-up payments so the rows can say
+    // "put in kitty" rather than "sent"; the net comes out the same either way
+    var paid={}, share={}, made={}, got={}, kin={}, kheld={};
+    state.people.forEach(function(p){ paid[p.id]=0; share[p.id]=0; made[p.id]=0; got[p.id]=0; kin[p.id]=0; kheld[p.id]=0; });
     state.expenses.forEach(function(e){
       if(personActive(e.paidBy)) paid[e.paidBy]+=e.amount;
       partsOf(e).forEach(function(id){ share[id]+=shareOf(e,id); });
     });
     state.payments.forEach(function(p){
+      if(isKitty(p)){
+        if(personActive(p.from)) kin[p.from]+=p.amount;
+        if(personActive(p.to))   kheld[p.to]+=p.amount;
+        return;
+      }
+      if(p.from===p.to) return;
       if(personActive(p.from)) made[p.from]+=p.amount;
       if(personActive(p.to))   got[p.to]  +=p.amount;
     });
     return state.people.map(function(p){
       var orig=paid[p.id]-share[p.id];
+      // own contribution to a kitty you hold is in both kin and kheld: it cancels
+      var net=orig+made[p.id]-got[p.id]+kin[p.id]-kheld[p.id];
       return { id:p.id, name:p.name, paid:paid[p.id], share:share[p.id],
-               made:made[p.id], got:got[p.id], orig:orig, net:orig+made[p.id]-got[p.id] };
+               made:made[p.id], got:got[p.id], kin:kin[p.id], kheld:kheld[p.id],
+               holds:kittyHeldBy(p.id), orig:orig, net:net };
     });
   }
   function computeSettlement(bals){
@@ -1113,6 +1294,18 @@
     var t1=el("div"); t1.innerHTML='<b class="num">'+money(spent)+"</b>total spent";
     var t2=el("div"); t2.innerHTML='<b class="num">'+money(spent/Math.max(1,state.people.length))+"</b>average each";
     totals.appendChild(t1); totals.appendChild(t2);
+    var ks=state.payments.filter(isKitty);
+    if(ks.length){
+      var kc=ks.reduce(function(a,p){ return a+p.amount; },0), holders={};
+      ks.forEach(function(p){ holders[p.to]=1; });
+      var kspent=state.expenses.reduce(function(a,e){ return a+(holders[e.paidBy]?e.amount:0); },0);
+      var kl=kc-kspent;
+      var t3=el("div"); t3.innerHTML='<b class="num"></b>'+(kl<-0.005?"contribution overspent":"contribution left");
+      t3.firstChild.textContent=money(Math.abs(kl)); totals.appendChild(t3);
+    }
+    var ntx=computeSettlement(bals).length;
+    var t4=el("div"); t4.innerHTML='<b class="num">'+ntx+'</b>transfer'+(ntx===1?"":"s")+" to settle";
+    totals.appendChild(t4);
 
     if(!me){
       hero.className="hero flat";
@@ -1145,6 +1338,13 @@
       hero.className="hero debit";
       $("heroCaption").textContent="You owe";
       $("heroFigure").textContent=money(-mine.net);
+      var held=kittyHeldBy(me);
+      if(held>0.005){
+        $("heroDetail").textContent = held+0.005>=-mine.net
+          ? "That’s contribution money you’re holding for the group. It comes down as you log what you spend from it."
+          : money(held)+" of it is contribution money you’re holding for the group.";
+        if(held+0.005>=-mine.net){ $("heroCaption").textContent="You’re holding for the group"; return; }
+      }
       $("heroDetail").textContent = oweTo.length
         ? "To "+listNames(oweTo.map(function(t){return t.to;}))+"."
         : "Once the transfers below go through.";
@@ -1187,12 +1387,19 @@
       row.appendChild(top);
 
       var meta="paid "+money(b.paid)+" · share "+money(b.share);
+      if(b.kin >0.005) meta+=" · contributed "+money(b.kin);
       if(b.made>0.005) meta+=" · sent "+money(b.made);
       if(b.got >0.005) meta+=" · received "+money(b.got);
-      meta+=" · "+(flat?"settled up":(b.net>0?"gets back":"owes"));
+      meta+=" · "+statusWord(b);
       row.appendChild(el("div","bmeta",meta));
 
+      row.appendChild(el("div","dnet num "+kind,net.textContent));
+
       var bar=el("div","bbar");
+      bar.tabIndex=0;
+      bar.setAttribute("role","img");
+      bar.setAttribute("aria-label", b.name+": "+statusWord(b)+(flat?"":" "+money(Math.abs(b.net))));
+      bindTip(bar, function(){ return balanceTip(b, kind); });
       bar.appendChild(el("span","zero"));
       if(!flat){
         var fill=el("span","fill "+kind);
@@ -1203,9 +1410,49 @@
       box.appendChild(row);
     });
     var lg=el("div","blegend");
-    lg.innerHTML='<span><i style="background:var(--debit)"></i>owes the group</span>'
+    lg.innerHTML='<span><i style="background:var(--debit)"></i>owes the group or holds contribution money</span>'
                + '<span><i style="background:var(--credit)"></i>gets money back</span>';
     box.appendChild(lg);
+  }
+
+  // a kitty holder's negative balance is cash in hand, not a debt they ran up
+  function holdingKitty(b){ return b.net<-0.005 && b.holds+0.005>=-b.net; }
+  function statusWord(b){
+    if(Math.abs(b.net)<0.005) return "settled up";
+    if(b.net>0) return "gets back";
+    return holdingKitty(b) ? "holding contributions" : "owes";
+  }
+
+  // ===== tooltip (enhances; every value is also in the row text) =====
+  var tipEl=null;
+  function bindTip(node, build){
+    function show(x,y){
+      if(!tipEl){ tipEl=el("div","tip"); tipEl.setAttribute("role","tooltip"); document.body.appendChild(tipEl); }
+      tipEl.innerHTML=""; tipEl.appendChild(build()); tipEl.hidden=false;
+      var r=tipEl.getBoundingClientRect();
+      var left=Math.min(x+14, innerWidth-r.width-8), top=y-r.height-12;
+      if(top<8) top=y+18;
+      tipEl.style.left=Math.max(8,left)+"px"; tipEl.style.top=top+"px";
+    }
+    function hide(){ if(tipEl) tipEl.hidden=true; }
+    node.addEventListener("pointermove",function(e){ if(e.pointerType==="mouse") show(e.clientX,e.clientY); });
+    node.addEventListener("pointerleave",hide);
+    node.addEventListener("focus",function(){ var r=node.getBoundingClientRect(); show(r.left+r.width/2, r.top); });
+    node.addEventListener("blur",hide);
+  }
+  function balanceTip(b, kind){
+    var f=document.createDocumentFragment();
+    f.appendChild(el("div","v num",(kind==="flat"?"":(b.net>0?"+":"−"))+money(Math.abs(b.net))));
+    var k=el("div","k"); var sw=el("i");
+    sw.style.background = kind==="credit"?"var(--credit)":kind==="debit"?"var(--debit)":"var(--ink-3)";
+    k.appendChild(sw); k.appendChild(document.createTextNode(b.name+" · "+statusWord(b)));
+    f.appendChild(k);
+    [["Paid",b.paid],["Share",b.share],["Contributed",b.kin],["Contribution held",b.holds>0.005?b.holds:0],["Sent",b.made],["Received",b.got]].forEach(function(r,i){
+      if(i>1 && !(r[1]>0.005)) return;
+      var row=el("div","r"); row.appendChild(el("span",null,r[0])); row.appendChild(el("b","num",money(r[1])));
+      f.appendChild(row);
+    });
+    return f;
   }
 
   // ===== settle =====
@@ -1216,7 +1463,8 @@
       $("cSet").textContent="0";
       return;
     }
-    var tx=computeSettlement(computeBalances());
+    var bals=computeBalances(), tx=computeSettlement(bals);
+    var fromKitty={}; bals.forEach(function(b){ if(holdingKitty(b)) fromKitty[b.id]=1; });
     $("cSet").textContent=String(tx.length);
     if(!tx.length){
       box.innerHTML='<div class="allsquare"><p class="big">Everyone’s square</p><p>No transfers left. Nice trip.</p></div>';
@@ -1232,6 +1480,7 @@
       flow.appendChild(f);
       flow.insertAdjacentHTML("beforeend", icon("arrow","sm arrow"));
       flow.appendChild(to);
+      if(fromKitty[t.fromId]) flow.appendChild(el("span","ktag","from contribution"));
       row.appendChild(flow);
       row.appendChild(el("span","amt num",money(t.amt)));
       var mk=el("button","btn ghost sm");
@@ -1260,11 +1509,12 @@
     $("savePaymentLabel").textContent = editing ? "Save" : "Record";
     $("cancelPayEdit").hidden = !editing;
 
-    if(!state.payments.length){
+    var list=state.payments.filter(function(p){ return !isKitty(p); });
+    if(!list.length){
       box.innerHTML='<p class="empty"><b>No payments yet</b>Mark a transfer above as paid, or record one by hand below.</p>';
       return;
     }
-    state.payments.slice().reverse().forEach(function(p){
+    list.slice().reverse().forEach(function(p){
       var row=el("div","lrow"+(editingPayment===p.id?" editing":""));
       row.appendChild(el("span","avatar",initials(nameOf(p.from))));
       var body=el("div","body");
@@ -1283,11 +1533,115 @@
     });
   }
 
+  // ===== kitty =====
+  function kittyHolderDefault(){
+    var ks=state.payments.filter(isKitty);
+    if(ks.length) return ks[ks.length-1].to;
+    return me||(state.people[0]&&state.people[0].id)||"";
+  }
+  // kitty cash this person still holds: what they collected minus what they paid out
+  function kittyHeldBy(id){
+    var got=0, spent=0;
+    state.payments.forEach(function(p){ if(isKitty(p) && p.to===id) got+=p.amount; });
+    if(!got) return 0;
+    state.expenses.forEach(function(e){ if(e.paidBy===id) spent+=e.amount; });
+    return got-spent;
+  }
+  function renderKitty(){
+    var box=$("kitty"), list=$("kitList");
+    box.innerHTML=""; list.innerHTML="";
+    var enough=state.people.length>=1;
+    $("kitForm").hidden=!enough;
+    if(enough){
+      fillSelect($("kitFrom"), null, 0);
+      fillSelect($("kitTo"), personActive($("kitTo").value)?$("kitTo").value:kittyHolderDefault(), 0);
+    }
+
+    var ks=state.payments.filter(isKitty);
+    if(!ks.length){
+      box.innerHTML='<p class="empty"><b>No contributions yet</b>If everyone chips in up front, record each person&rsquo;s share below and this tracks what&rsquo;s left.</p>';
+      list.innerHTML='<p class="empty"><b>No contributions yet</b>Use &ldquo;Add for everyone&rdquo; when each person puts in the same amount.</p>';
+      return;
+    }
+
+    // per holder: collected vs. spent out of their pocket
+    var holders={}, order=[];
+    ks.forEach(function(p){
+      if(!holders[p.to]){ holders[p.to]={ got:0, spent:0 }; order.push(p.to); }
+      holders[p.to].got+=p.amount;
+    });
+    state.expenses.forEach(function(e){ if(holders[e.paidBy]) holders[e.paidBy].spent+=e.amount; });
+    var collected=0, spent=0;
+    order.forEach(function(id){ collected+=holders[id].got; spent+=holders[id].spent; });
+    var left=collected-spent, over=left<-0.005;
+
+    var stats=el("div","kstats");
+    function stat(label,val,cls){
+      var d=el("div","kstat"+(cls?" "+cls:""));
+      d.appendChild(el("span",null,label)); d.appendChild(el("b","num",val));
+      stats.appendChild(d);
+    }
+    stat("Collected", money(collected));
+    stat("Spent", money(spent));
+    stat(over?"Overspent":"Left", money(Math.abs(left)), over?"over":"left");
+    box.appendChild(stats);
+
+    var meter=el("div","kmeter"+(over?" over":""));
+    var fill=el("span"); fill.style.width=Math.min(100, collected>0?spent/collected*100:100)+"%";
+    meter.appendChild(fill); box.appendChild(meter);
+    box.appendChild(el("p","knote", over
+      ? "Spending has gone past what was contributed. Balances and Settle show who owes the difference."
+      : Math.round(collected>0?spent/collected*100:0)+"% of the contribution spent."));
+
+    if(order.length>1){
+      var hs=el("div","kholders");
+      order.forEach(function(id){
+        var h=holders[id], r=el("div","txrow");
+        r.appendChild(el("span","flow",(id===me?"You":nameOf(id))+" holds"));
+        r.appendChild(el("span","amt num",money(h.got-h.spent)));
+        hs.appendChild(r);
+      });
+      box.appendChild(hs);
+    }
+
+    ks.slice().reverse().forEach(function(p){
+      var row=el("div","lrow");
+      row.appendChild(el("span","avatar",initials(nameOf(p.from))));
+      var body=el("div","body");
+      body.appendChild(el("div","d",nameOf(p.from)));
+      body.appendChild(el("div","m",prettyDate(p)+(p.from===p.to?" · collected it":" · to "+nameOf(p.to))));
+      row.appendChild(body);
+      row.appendChild(el("div","amt num in",money(p.amount)));
+      var acts=el("div","acts");
+      var del=el("button","btn danger"); del.setAttribute("aria-label","Delete contribution");
+      del.innerHTML=icon("trash","sm"); del.onclick=function(){ deletePayment(p.id); };
+      acts.appendChild(del); row.appendChild(acts);
+      list.appendChild(row);
+    });
+    var line=el("div","totalline");
+    line.appendChild(el("span",null,ks.length+" contribution"+(ks.length===1?"":"s")));
+    line.appendChild(el("b","num",money(collected)));
+    list.appendChild(line);
+  }
+  function addKitty(everyone){
+    var amt=parseFloat($("kitAmt").value), to=$("kitTo").value;
+    if(!(amt>0)){ toast("Enter an amount above zero"); $("kitAmt").focus(); return; }
+    if(!to){ toast("Pick who collected it"); return; }
+    var rounded=Math.round(amt*100)/100, now=Date.now();
+    var who=everyone ? state.people.map(function(p){ return p.id; }) : [$("kitFrom").value];
+    who.forEach(function(id){
+      state.payments.push({ id:uid(), from:id, to:to, amount:rounded, ts:now, date:isoDate(now), note:KITTY });
+    });
+    $("kitAmt").value="";
+    renderApp(); persist();
+    toast(everyone ? money(rounded)+" from each of "+who.length+" added" : money(rounded)+" from "+nameOf(who[0])+" added");
+  }
+
   function renderApp(){
     $("tripName").textContent=currentTrip||"";
     $("curInput").value=state.cur;
     renderPeople(); renderExpenseForm(); renderExpenses();
-    renderHero(); renderBalances(); renderSettle(); renderPayments();
+    renderHero(); renderBalances(); renderSettle(); renderPayments(); renderKitty();
   }
 
   // ===== views & tabs =====
@@ -1295,8 +1649,9 @@
   function showApp(){ $("tripsView").hidden=true; $("appView").hidden=false; }
   function setTab(name){
     tab=name;
-    ["log","bal","set"].forEach(function(t){
+    ["log","bal","kit","set"].forEach(function(t){
       $("tab-"+t).setAttribute("aria-selected", t===name?"true":"false");
+      $("tab-"+t).tabIndex = t===name ? 0 : -1;
       $("panel-"+t).dataset.active = t===name ? "true" : "false";
     });
   }
@@ -1350,7 +1705,7 @@
       if(id) lsSet(LS_ME+currentTrip, nameOf(id));
       else lsDel(LS_ME+currentTrip);
     }
-    renderPeople(); renderHero(); renderBalances(); renderSettle();
+    renderPeople(); renderHero(); renderBalances(); renderSettle(); renderKitty();
   }
   async function createTrip(){
     var inp=$("newTrip"), name=(inp.value||"").trim();
@@ -1404,7 +1759,7 @@
       toast("Delete "+nameOf(id)+"’s expenses first"); return;
     }
     if(state.payments.some(function(p){ return p.from===id || p.to===id; })){
-      toast("Delete "+nameOf(id)+"’s payments first"); return;
+      toast("Delete "+nameOf(id)+"’s payments and contributions first"); return;
     }
     if(me===id) setMe("");
     state.people=state.people.filter(function(p){return p.id!==id;});
@@ -1554,7 +1909,7 @@
     $("personInput").addEventListener("keydown",function(e){ if(e.key==="Enter") addPerson(); });
     $("meSelect").onchange=function(){ setMe(this.value); };
 
-    ["log","bal","set"].forEach(function(t){ $("tab-"+t).onclick=function(){ setTab(t); }; });
+    ["log","bal","kit","set"].forEach(function(t){ $("tab-"+t).onclick=function(){ setTab(t); }; });
 
     $("saveExpense").onclick=saveExpense;
     $("cancelEdit").onclick=cancelEditExpense;
@@ -1575,8 +1930,36 @@
     };
 
     $("savePayment").onclick=savePayment;
+    $("kitAdd").onclick=function(){ addKitty(false); };
+    $("kitAll").onclick=function(){ addKitty(true); };
+    $("kitAmt").addEventListener("keydown",function(e){ if(e.key==="Enter") addKitty(false); });
     $("cancelPayEdit").onclick=cancelEditPayment;
     $("pyAmt").addEventListener("keydown",function(e){ if(e.key==="Enter") savePayment(); });
+
+    document.addEventListener("keydown",function(e){
+      if($("appView").hidden) return;
+      if((e.ctrlKey||e.metaKey) && !e.shiftKey && !e.altKey && (e.key==="s"||e.key==="S")){
+        e.preventDefault(); $("saveNow").click(); return;
+      }
+      if(e.ctrlKey||e.metaKey||e.altKey) return;
+      var a=document.activeElement, tags=["INPUT","SELECT","TEXTAREA"];
+      if(a && (tags.indexOf(a.tagName)>=0 || a.isContentEditable)) return;
+      var map={"1":"log","2":"bal","3":"kit","4":"set"};
+      if(map[e.key]){ e.preventDefault(); setTab(map[e.key]); $("tab-"+map[e.key]).focus(); return; }
+      if(e.key==="n"||e.key==="N"){
+        if($("expForm").hidden) return;
+        e.preventDefault(); setTab("log"); $("exDesc").focus();
+      }
+    });
+    // arrow keys move between tabs, as a tablist should
+    $("tab-log").parentNode.addEventListener("keydown",function(e){
+      var order=["log","bal","kit","set"], i=order.indexOf(tab), d=0;
+      if(e.key==="ArrowRight"||e.key==="ArrowDown") d=1;
+      else if(e.key==="ArrowLeft"||e.key==="ArrowUp") d=-1;
+      if(!d) return;
+      e.preventDefault();
+      var nx=order[(i+d+order.length)%order.length]; setTab(nx); $("tab-"+nx).focus();
+    });
 
     $("saveNow").onclick=function(){
       if(!currentTrip){ toast("Open a trip first"); return; }
@@ -1585,7 +1968,7 @@
     };
     $("curInput").addEventListener("input",function(){
       state.cur=(this.value||"").trim()||"₹";
-      renderExpenses(); renderHero(); renderBalances(); renderSettle(); renderPayments(); refreshSplitAmounts();
+      renderExpenses(); renderHero(); renderBalances(); renderSettle(); renderPayments(); renderKitty(); refreshSplitAmounts();
       persist();
     });
 
