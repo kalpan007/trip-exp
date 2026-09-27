@@ -384,6 +384,7 @@
   .btop .net{font-weight:700; letter-spacing:-.01em}
   .btop .net.credit{color:var(--credit)} .btop .net.debit{color:var(--debit)} .btop .net.flat{color:var(--ink-3)}
   .bmeta{font-size:var(--t-sm); color:var(--ink-3); margin-top:1px}
+  .bmeta span{white-space:nowrap}
   .bbar{position:relative; height:10px; margin-top:9px; border-radius:5px; background:var(--sunken);
     border:1px solid var(--line)}
   .bbar .zero{position:absolute; top:-2px; bottom:-2px; left:50%; width:1px; background:var(--line-strong)}
@@ -1459,12 +1460,19 @@
       top.appendChild(nm); top.appendChild(net);
       row.appendChild(top);
 
-      var meta="paid "+money(b.paid)+" · share "+money(b.share);
-      if(b.kin >0.005) meta+=" · contributed "+money(b.kin);
-      if(b.made>0.005) meta+=" · sent "+money(b.made);
-      if(b.got >0.005) meta+=" · received "+money(b.got);
-      meta+=" · "+statusWord(b);
-      row.appendChild(el("div","bmeta",meta));
+      // each "label amount" pair stays on one line when the row wraps
+      var parts=["paid "+money(b.paid), "share "+money(b.share)];
+      if(b.kin >0.005) parts.push("contributed "+money(b.kin));
+      if(b.kheld>0.005) parts.push("collected "+money(b.kheld));
+      if(b.made>0.005) parts.push("sent "+money(b.made));
+      if(b.got >0.005) parts.push("received "+money(b.got));
+      parts.push(statusWord(b));
+      var bm=el("div","bmeta");
+      parts.forEach(function(t,i){
+        if(i) bm.appendChild(document.createTextNode(" · "));
+        bm.appendChild(el("span",null,t));
+      });
+      row.appendChild(bm);
 
       row.appendChild(el("div","dnet num "+kind,net.textContent));
 
@@ -1520,7 +1528,7 @@
     sw.style.background = kind==="credit"?"var(--credit)":kind==="debit"?"var(--debit)":"var(--ink-3)";
     k.appendChild(sw); k.appendChild(document.createTextNode(b.name+" · "+statusWord(b)));
     f.appendChild(k);
-    [["Paid",b.paid],["Share",b.share],["Contributed",b.kin],["Contribution held",b.holds>0.005?b.holds:0],["Sent",b.made],["Received",b.got]].forEach(function(r,i){
+    [["Paid",b.paid],["Share",b.share],["Contributed",b.kin],["Collected",b.kheld],["Still holding",b.holds>0.005?b.holds:0],["Sent",b.made],["Received",b.got]].forEach(function(r,i){
       if(i>1 && !(r[1]>0.005)) return;
       var row=el("div","r"); row.appendChild(el("span",null,r[0])); row.appendChild(el("b","num",money(r[1])));
       f.appendChild(row);
