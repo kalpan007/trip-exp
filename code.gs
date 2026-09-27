@@ -12,8 +12,20 @@
  *   A1 "Trip name"  B1 <name>
  *   A2 "Currency"   B2 <symbol>
  *   D1 "People",      D2:D...            one name per row
- *   F1:K1 Expenses    Description | Amount | Paid by | Shared by | Timestamp | Shares
- *   L1:P1 Payments    Date | Who pays | Pays to | Amount | Note
+ *   F1:L1 Expenses    Description | Amount | Paid by | Shared by | Timestamp | Shares | From contribution
+ *   M1:Q1 Payments    Date | Who pays | Pays to | Amount | Note
+ *
+ * CONTRIBUTIONS
+ *   Money pooled up front is a payment with Note "collection", made to the
+ *   person who collected it. "From contribution" (column L) is "Yes" when an
+ *   expense was paid out of that money, "No" when the collector paid it
+ *   themselves, and blank for rows written before this column existed (read
+ *   as "Yes" when the collector paid, which was the old rule).
+ *
+ * OLDER TABS
+ *   Tabs saved by an older Code.gs have no column L and keep Payments in L:P.
+ *   They are recognised by "Date" in L1, read as before, and rewritten in the
+ *   new layout the next time the page saves them.
  *
  * UNEVEN SPLITS
  *   "Shared by" (column I) always lists every participant by name, so an older
@@ -35,12 +47,13 @@
  */
 
 var MARKER = 'Trip name';
-var EXP_HEADERS = ['Description', 'Amount', 'Paid by', 'Shared by', 'Timestamp', 'Shares'];
+var EXP_HEADERS = ['Description', 'Amount', 'Paid by', 'Shared by', 'Timestamp', 'Shares', 'From contribution'];
 var PAY_HEADERS = ['Date', 'Who pays', 'Pays to', 'Amount', 'Note'];
 var COL_PEOPLE = 4;   // D
-var COL_EXP = 6;      // F..K  (6 columns)
-var EXP_WIDTH = 6;
-var COL_PAY = 12;     // L..P
+var COL_EXP = 6;      // F..L  (7 columns)
+var EXP_WIDTH = 7;
+var COL_PAY = 13;     // M..Q
+var OLD_COL_PAY = 12; // L..P on tabs written before "From contribution"
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || 'list';
@@ -142,7 +155,12 @@ function readTrip_(name) {
       if (r[0] !== '' && r[0] != null) people.push(String(r[0]));
     });
 
-    sh.getRange(2, COL_EXP, rows, EXP_WIDTH).getValues().forEach(function (r) {
+    // an older tab keeps Payments in L:P, right after a 6-column Expenses block
+    var old = String(sh.getRange(1, OLD_COL_PAY).getValue()) === PAY_HEADERS[0];
+    var expWidth = old ? 6 : EXP_WIDTH;
+    var payCol = old ? OLD_COL_PAY : COL_PAY;
+
+    sh.getRange(2, COL_EXP, rows, expWidth).getValues().forEach(function (r) {
       if ((r[0] === '' || r[0] == null) && (r[1] === '' || r[1] == null)) return;
       var shares = String(r[3] || '').split(',').map(function (s) { return s.trim(); }).filter(String);
       var e = {
@@ -154,10 +172,13 @@ function readTrip_(name) {
       };
       var w = parseShares_(r[5], shares);
       if (w) e.weights = w;             // absent means "equal", which the page assumes
+      var pool = String(r[6] || '').trim().toLowerCase();
+      if (pool === 'yes') e.fromPool = true;
+      else if (pool === 'no') e.fromPool = false;   // blank: the page applies the old rule
       expenses.push(e);
     });
 
-    sh.getRange(2, COL_PAY, rows, 5).getValues().forEach(function (r) {
+    sh.getRange(2, payCol, rows, 5).getValues().forEach(function (r) {
       if ((r[1] === '' || r[1] == null) && (r[3] === '' || r[3] == null)) return;
       payments.push({
         date: dateStr_(r[0]),
@@ -204,7 +225,8 @@ function writeTrip_(d) {
         x.paidBy || '',
         parts.join(', '),
         x.ts || Date.now(),
-        formatShares_(x.weights, parts)
+        formatShares_(x.weights, parts),
+        x.fromPool === true ? 'Yes' : x.fromPool === false ? 'No' : ''
       ];
     }));
   }
