@@ -290,7 +290,15 @@
     background:var(--sunken); color:var(--ink-2)}
   .tabbar button[aria-selected="true"] .count{background:color-mix(in srgb, var(--on-brand) 20%, transparent); color:var(--on-brand)}
   .tabpanel[data-active="false"]{display:none}
-  @media(max-width:420px){ .tabbar button > svg{display:none} }
+  @media(max-width:420px){
+    .tabbar button > svg{display:none}
+    .tabbar button{flex:1 1 auto; min-width:0; padding:10px 4px}
+  }
+  @media(max-width:380px){
+    .tabbar{gap:2px}
+    .tabbar button{font-size:var(--t-xs)}
+    .tabbar .count{display:none}
+  }
   kbd{font-family:var(--sans); font-size:.6875rem; font-weight:600; color:var(--ink-3); line-height:1;
     background:var(--surface); border:1px solid var(--line-strong); border-bottom-width:2px;
     border-radius:5px; padding:2px 5px; min-width:18px; text-align:center; display:inline-block}
@@ -636,7 +644,7 @@
       <button role="tab" id="tab-bal" aria-controls="panel-bal" aria-selected="false" data-tab="bal">
         <svg class="i sm" aria-hidden="true"><use href="#i-scales"/></svg><span class="lbl">Balances</span><kbd>2</kbd></button>
       <button role="tab" id="tab-kit" aria-controls="panel-kit" aria-selected="false" data-tab="kit">
-        <svg class="i sm" aria-hidden="true"><use href="#i-jar"/></svg><span class="lbl">Kitty</span><kbd>3</kbd></button>
+        <svg class="i sm" aria-hidden="true"><use href="#i-jar"/></svg><span class="lbl">Contribution</span><kbd>3</kbd></button>
       <button role="tab" id="tab-set" aria-controls="panel-set" aria-selected="false" data-tab="set">
         <svg class="i sm" aria-hidden="true"><use href="#i-swap"/></svg><span class="lbl">Settle</span><span class="count num" id="cSet">0</span><kbd>4</kbd></button>
     </nav>
@@ -728,8 +736,8 @@
           <section class="panel">
             <div class="phead">
               <div>
-                <h2><svg class="i sm" aria-hidden="true"><use href="#i-jar"/></svg>Kitty</h2>
-                <p class="sub">Money pooled up front. Spent counts every expense paid by whoever holds the kitty.</p>
+                <h2><svg class="i sm" aria-hidden="true"><use href="#i-jar"/></svg>Contribution</h2>
+                <p class="sub">Money everyone put in up front. Spent counts every expense paid by whoever collected it.</p>
               </div>
             </div>
             <div id="kitty"></div>
@@ -738,8 +746,8 @@
           <section class="panel">
             <div class="phead">
               <div>
-                <h2>Contributions</h2>
-                <p class="sub">Who put money in. Your own share goes in too, so the totals match the cash in hand.</p>
+                <h2>Who put in</h2>
+                <p class="sub">Add your own share too, so the total matches the cash in hand.</p>
               </div>
             </div>
             <div class="rows" id="kitList"></div>
@@ -1292,7 +1300,7 @@
       ks.forEach(function(p){ holders[p.to]=1; });
       var kspent=state.expenses.reduce(function(a,e){ return a+(holders[e.paidBy]?e.amount:0); },0);
       var kl=kc-kspent;
-      var t3=el("div"); t3.innerHTML='<b class="num"></b>'+(kl<-0.005?"kitty overspent":"left in kitty");
+      var t3=el("div"); t3.innerHTML='<b class="num"></b>'+(kl<-0.005?"contribution overspent":"contribution left");
       t3.firstChild.textContent=money(Math.abs(kl)); totals.appendChild(t3);
     }
     var ntx=computeSettlement(bals).length;
@@ -1333,8 +1341,8 @@
       var held=kittyHeldBy(me);
       if(held>0.005){
         $("heroDetail").textContent = held+0.005>=-mine.net
-          ? "That’s kitty money you’re holding for the group. It comes down as you log what you spend from it."
-          : money(held)+" of it is kitty money you’re holding for the group.";
+          ? "That’s contribution money you’re holding for the group. It comes down as you log what you spend from it."
+          : money(held)+" of it is contribution money you’re holding for the group.";
         if(held+0.005>=-mine.net){ $("heroCaption").textContent="You’re holding for the group"; return; }
       }
       $("heroDetail").textContent = oweTo.length
@@ -1379,7 +1387,7 @@
       row.appendChild(top);
 
       var meta="paid "+money(b.paid)+" · share "+money(b.share);
-      if(b.kin >0.005) meta+=" · put in kitty "+money(b.kin);
+      if(b.kin >0.005) meta+=" · contributed "+money(b.kin);
       if(b.made>0.005) meta+=" · sent "+money(b.made);
       if(b.got >0.005) meta+=" · received "+money(b.got);
       meta+=" · "+statusWord(b);
@@ -1402,7 +1410,7 @@
       box.appendChild(row);
     });
     var lg=el("div","blegend");
-    lg.innerHTML='<span><i style="background:var(--debit)"></i>owes the group or holds kitty cash</span>'
+    lg.innerHTML='<span><i style="background:var(--debit)"></i>owes the group or holds contribution money</span>'
                + '<span><i style="background:var(--credit)"></i>gets money back</span>';
     box.appendChild(lg);
   }
@@ -1412,7 +1420,7 @@
   function statusWord(b){
     if(Math.abs(b.net)<0.005) return "settled up";
     if(b.net>0) return "gets back";
-    return holdingKitty(b) ? "holding kitty cash" : "owes";
+    return holdingKitty(b) ? "holding contributions" : "owes";
   }
 
   // ===== tooltip (enhances; every value is also in the row text) =====
@@ -1439,7 +1447,7 @@
     sw.style.background = kind==="credit"?"var(--credit)":kind==="debit"?"var(--debit)":"var(--ink-3)";
     k.appendChild(sw); k.appendChild(document.createTextNode(b.name+" · "+statusWord(b)));
     f.appendChild(k);
-    [["Paid",b.paid],["Share",b.share],["Put in kitty",b.kin],["Kitty cash held",b.holds>0.005?b.holds:0],["Sent",b.made],["Received",b.got]].forEach(function(r,i){
+    [["Paid",b.paid],["Share",b.share],["Contributed",b.kin],["Contribution held",b.holds>0.005?b.holds:0],["Sent",b.made],["Received",b.got]].forEach(function(r,i){
       if(i>1 && !(r[1]>0.005)) return;
       var row=el("div","r"); row.appendChild(el("span",null,r[0])); row.appendChild(el("b","num",money(r[1])));
       f.appendChild(row);
@@ -1472,7 +1480,7 @@
       flow.appendChild(f);
       flow.insertAdjacentHTML("beforeend", icon("arrow","sm arrow"));
       flow.appendChild(to);
-      if(fromKitty[t.fromId]) flow.appendChild(el("span","ktag","from kitty"));
+      if(fromKitty[t.fromId]) flow.appendChild(el("span","ktag","from contribution"));
       row.appendChild(flow);
       row.appendChild(el("span","amt num",money(t.amt)));
       var mk=el("button","btn ghost sm");
@@ -1551,7 +1559,7 @@
 
     var ks=state.payments.filter(isKitty);
     if(!ks.length){
-      box.innerHTML='<p class="empty"><b>No kitty yet</b>If everyone chips in up front, record each person&rsquo;s share below and this tracks what&rsquo;s left.</p>';
+      box.innerHTML='<p class="empty"><b>No contributions yet</b>If everyone chips in up front, record each person&rsquo;s share below and this tracks what&rsquo;s left.</p>';
       list.innerHTML='<p class="empty"><b>No contributions yet</b>Use &ldquo;Add for everyone&rdquo; when each person puts in the same amount.</p>';
       return;
     }
@@ -1582,8 +1590,8 @@
     var fill=el("span"); fill.style.width=Math.min(100, collected>0?spent/collected*100:100)+"%";
     meter.appendChild(fill); box.appendChild(meter);
     box.appendChild(el("p","knote", over
-      ? "Spending has gone past the kitty. Balances and Settle show who owes the difference."
-      : Math.round(collected>0?spent/collected*100:0)+"% of the kitty used."));
+      ? "Spending has gone past what was contributed. Balances and Settle show who owes the difference."
+      : Math.round(collected>0?spent/collected*100:0)+"% of the contribution spent."));
 
     if(order.length>1){
       var hs=el("div","kholders");
@@ -1601,7 +1609,7 @@
       row.appendChild(el("span","avatar",initials(nameOf(p.from))));
       var body=el("div","body");
       body.appendChild(el("div","d",nameOf(p.from)));
-      body.appendChild(el("div","m",prettyDate(p)+(p.from===p.to?" · holds the kitty":" · to "+nameOf(p.to))));
+      body.appendChild(el("div","m",prettyDate(p)+(p.from===p.to?" · collected it":" · to "+nameOf(p.to))));
       row.appendChild(body);
       row.appendChild(el("div","amt num in",money(p.amount)));
       var acts=el("div","acts");
@@ -1751,7 +1759,7 @@
       toast("Delete "+nameOf(id)+"’s expenses first"); return;
     }
     if(state.payments.some(function(p){ return p.from===id || p.to===id; })){
-      toast("Delete "+nameOf(id)+"’s payments and kitty contributions first"); return;
+      toast("Delete "+nameOf(id)+"’s payments and contributions first"); return;
     }
     if(me===id) setMe("");
     state.people=state.people.filter(function(p){return p.id!==id;});
