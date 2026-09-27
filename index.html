@@ -409,6 +409,8 @@
   .txrow .who{font-weight:600}
   .txrow .who.me{color:var(--brand-ink)}
   .txrow svg.arrow{stroke:var(--ink-3)}
+  .txrow .ktag{font-size:var(--t-xs); font-weight:600; color:var(--brand-ink); background:var(--brand-soft);
+    border-radius:99px; padding:1px 8px}
   .txrow .amt{font-weight:700; letter-spacing:-.01em; white-space:nowrap}
   .allsquare{text-align:center; padding:26px 18px; border-radius:var(--r-md);
     background:var(--credit-soft); border:1px solid var(--line)}
@@ -1025,21 +1027,31 @@
 
   // ===== calculations =====
   function computeBalances(){
-    var paid={}, share={}, made={}, got={};
-    state.people.forEach(function(p){ paid[p.id]=0; share[p.id]=0; made[p.id]=0; got[p.id]=0; });
+    // kitty money is kept apart from settle-up payments so the rows can say
+    // "put in kitty" rather than "sent"; the net comes out the same either way
+    var paid={}, share={}, made={}, got={}, kin={}, kheld={};
+    state.people.forEach(function(p){ paid[p.id]=0; share[p.id]=0; made[p.id]=0; got[p.id]=0; kin[p.id]=0; kheld[p.id]=0; });
     state.expenses.forEach(function(e){
       if(personActive(e.paidBy)) paid[e.paidBy]+=e.amount;
       partsOf(e).forEach(function(id){ share[id]+=shareOf(e,id); });
     });
     state.payments.forEach(function(p){
-      if(p.from===p.to) return;                      // own kitty share: moves nothing
+      if(isKitty(p)){
+        if(personActive(p.from)) kin[p.from]+=p.amount;
+        if(personActive(p.to))   kheld[p.to]+=p.amount;
+        return;
+      }
+      if(p.from===p.to) return;
       if(personActive(p.from)) made[p.from]+=p.amount;
       if(personActive(p.to))   got[p.to]  +=p.amount;
     });
     return state.people.map(function(p){
       var orig=paid[p.id]-share[p.id];
+      // own contribution to a kitty you hold is in both kin and kheld: it cancels
+      var net=orig+made[p.id]-got[p.id]+kin[p.id]-kheld[p.id];
       return { id:p.id, name:p.name, paid:paid[p.id], share:share[p.id],
-               made:made[p.id], got:got[p.id], orig:orig, net:orig+made[p.id]-got[p.id] };
+               made:made[p.id], got:got[p.id], kin:kin[p.id], kheld:kheld[p.id],
+               holds:kittyHeldBy(p.id), orig:orig, net:net };
     });
   }
   function computeSettlement(bals){
@@ -1323,7 +1335,7 @@
         $("heroDetail").textContent = held+0.005>=-mine.net
           ? "That’s kitty money you’re holding for the group. It comes down as you log what you spend from it."
           : money(held)+" of it is kitty money you’re holding for the group.";
-        if(held+0.005>=-mine.net) return;
+        if(held+0.005>=-mine.net){ $("heroCaption").textContent="You’re holding for the group"; return; }
       }
       $("heroDetail").textContent = oweTo.length
         ? "To "+listNames(oweTo.map(function(t){return t.to;}))+"."
@@ -1367,9 +1379,10 @@
       row.appendChild(top);
 
       var meta="paid "+money(b.paid)+" · share "+money(b.share);
+      if(b.kin >0.005) meta+=" · put in kitty "+money(b.kin);
       if(b.made>0.005) meta+=" · sent "+money(b.made);
       if(b.got >0.005) meta+=" · received "+money(b.got);
-      meta+=" · "+(flat?"settled up":(b.net>0?"gets back":"owes"));
+      meta+=" · "+statusWord(b);
       row.appendChild(el("div","bmeta",meta));
 
       row.appendChild(el("div","dnet num "+kind,net.textContent));
@@ -1377,7 +1390,7 @@
       var bar=el("div","bbar");
       bar.tabIndex=0;
       bar.setAttribute("role","img");
-      bar.setAttribute("aria-label", b.name+": "+(flat?"settled up":(b.net>0?"gets back ":"owes ")+money(Math.abs(b.net))));
+      bar.setAttribute("aria-label", b.name+": "+statusWord(b)+(flat?"":" "+money(Math.abs(b.net))));
       bindTip(bar, function(){ return balanceTip(b, kind); });
       bar.appendChild(el("span","zero"));
       if(!flat){
@@ -1389,9 +1402,17 @@
       box.appendChild(row);
     });
     var lg=el("div","blegend");
-    lg.innerHTML='<span><i style="background:var(--debit)"></i>owes the group</span>'
+    lg.innerHTML='<span><i style="background:var(--debit)"></i>owes the group or holds kitty cash</span>'
                + '<span><i style="background:var(--credit)"></i>gets money back</span>';
     box.appendChild(lg);
+  }
+
+  // a kitty holder's negative balance is cash in hand, not a debt they ran up
+  function holdingKitty(b){ return b.net<-0.005 && b.holds+0.005>=-b.net; }
+  function statusWord(b){
+    if(Math.abs(b.net)<0.005) return "settled up";
+    if(b.net>0) return "gets back";
+    return holdingKitty(b) ? "holding kitty cash" : "owes";
   }
 
   // ===== tooltip (enhances; every value is also in the row text) =====
@@ -1416,9 +1437,9 @@
     f.appendChild(el("div","v num",(kind==="flat"?"":(b.net>0?"+":"−"))+money(Math.abs(b.net))));
     var k=el("div","k"); var sw=el("i");
     sw.style.background = kind==="credit"?"var(--credit)":kind==="debit"?"var(--debit)":"var(--ink-3)";
-    k.appendChild(sw); k.appendChild(document.createTextNode(b.name+" · "+(kind==="flat"?"settled up":(b.net>0?"gets back":"owes"))));
+    k.appendChild(sw); k.appendChild(document.createTextNode(b.name+" · "+statusWord(b)));
     f.appendChild(k);
-    [["Paid",b.paid],["Share",b.share],["Sent",b.made],["Received",b.got]].forEach(function(r,i){
+    [["Paid",b.paid],["Share",b.share],["Put in kitty",b.kin],["Kitty cash held",b.holds>0.005?b.holds:0],["Sent",b.made],["Received",b.got]].forEach(function(r,i){
       if(i>1 && !(r[1]>0.005)) return;
       var row=el("div","r"); row.appendChild(el("span",null,r[0])); row.appendChild(el("b","num",money(r[1])));
       f.appendChild(row);
@@ -1434,7 +1455,8 @@
       $("cSet").textContent="0";
       return;
     }
-    var tx=computeSettlement(computeBalances());
+    var bals=computeBalances(), tx=computeSettlement(bals);
+    var fromKitty={}; bals.forEach(function(b){ if(holdingKitty(b)) fromKitty[b.id]=1; });
     $("cSet").textContent=String(tx.length);
     if(!tx.length){
       box.innerHTML='<div class="allsquare"><p class="big">Everyone’s square</p><p>No transfers left. Nice trip.</p></div>';
@@ -1450,6 +1472,7 @@
       flow.appendChild(f);
       flow.insertAdjacentHTML("beforeend", icon("arrow","sm arrow"));
       flow.appendChild(to);
+      if(fromKitty[t.fromId]) flow.appendChild(el("span","ktag","from kitty"));
       row.appendChild(flow);
       row.appendChild(el("span","amt num",money(t.amt)));
       var mk=el("button","btn ghost sm");
