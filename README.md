@@ -66,6 +66,14 @@ Contributions are saved as payments with the note `collection`, so no
 to themselves: it doesn't change anyone's balance, but it keeps the totals equal
 to the cash in hand.
 
+## On a computer
+
+On a wide screen (Windows, Mac) the trip opens with a sidebar for Expenses,
+Balances, Kitty and Settle, and each section is laid out in two columns.
+Keyboard shortcuts: **N** new expense, **1–4** switch section, **Ctrl+S** save
+to the sheet. Hover or tab onto a balance bar for its breakdown. Windows High
+Contrast mode is supported.
+
 ## Good to know
 
 - Anyone with the page URL **and** the Web app URL can read and edit the trip;
