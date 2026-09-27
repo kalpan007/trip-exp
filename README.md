@@ -53,6 +53,19 @@ deployments →** pencil **→ Version: New version**) or uneven splits will be
 saved as equal ones. The page checks after every save and tells you if that
 happens rather than quietly changing your numbers.
 
+## Kitty (money pooled up front)
+
+If everyone chips in before the trip, open the **Kitty** tab, pick who
+**collected** the money, enter the amount and tap **Add for everyone** (or add
+people one at a time). Then log expenses as usual, paid by the kitty holder.
+The tab shows how much was **collected**, how much was **spent** (every expense
+paid by whoever holds the kitty) and how much is **left**.
+
+Contributions are saved as payments with the note `collection`, so no
+`Code.gs` update is needed. The holder's own contribution is stored as a payment
+to themselves: it doesn't change anyone's balance, but it keeps the totals equal
+to the cash in hand.
+
 ## Good to know
 
 - Anyone with the page URL **and** the Web app URL can read and edit the trip;
