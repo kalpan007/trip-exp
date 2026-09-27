@@ -31,7 +31,7 @@ The page needs a tiny script on your Sheet to store data.
    and tap **Connect**.
 
 Each trip gets its own tab, created automatically, holding four blocks: the trip
-name and currency (A-B), People (D), Expenses (F-K) and Payments (L-P).
+name and currency (A-B), People (D), Expenses (F-L) and Payments (M-Q).
 
 Optional: to skip the paste step, open `index.html` and set
 `var SHEET_API = "https://script.google.com/macros/s/.../exec";` near the top of
@@ -57,14 +57,25 @@ happens rather than quietly changing your numbers.
 
 If everyone chips in before the trip, open the **Contribution** tab, pick who
 **collected** the money, enter the amount and tap **Add for everyone** (or add
-people one at a time). Then log expenses as usual, paid by whoever collected the money.
-The tab shows how much was **collected**, how much was **spent** (every expense
-paid by whoever collected it) and how much is **left**.
+people one at a time). The tab shows how much was **collected**, how much was
+**spent** and how much is **left**.
 
-Contributions are saved as payments with the note `collection`, so no
-`Code.gs` update is needed. The holder's own contribution is stored as a payment
-to themselves: it doesn't change anyone's balance, but it keeps the totals equal
-to the cash in hand.
+When the person holding that money logs an expense, **Paid from contribution**
+is ticked for them. Untick it when they paid out of their own pocket instead:
+the cost is still split and shows up in everyone's balance, but it isn't taken
+from what was collected. Ticking it while someone else is under **Who paid**
+switches the payer to the collector.
+
+Contributions are saved as payments with the note `collection`. The tick is
+saved in the expense's **From contribution** column (L) as `Yes` or `No`.
+Expenses logged before that column existed are left blank and count as paid
+from the contribution when the collector paid them, as before.
+
+**Updating from an older `Code.gs`:** paste in the new one and redeploy
+(**Deploy → Manage deployments →** pencil **→ Version: New version**). Older
+trip tabs are read as they are and moved to the new column layout the next
+time they save. Until you redeploy, an unticked box can't be stored, and the
+page says so in the status bar.
 
 ## On a computer
 

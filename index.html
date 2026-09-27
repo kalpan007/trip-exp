@@ -428,6 +428,21 @@
     margin-top:14px; padding-top:13px; border-top:1px solid var(--line); font-size:var(--t-md); color:var(--ink-3)}
   .totalline b{font-size:var(--t-lg); font-weight:700; color:var(--ink); letter-spacing:-.01em}
 
+  .poolchk{display:flex; align-items:center; gap:10px; margin:12px 0 0; padding:10px 12px; cursor:pointer;
+    font-size:var(--t-md); font-weight:500; color:var(--ink); letter-spacing:0;
+    border:1px solid var(--line); border-radius:var(--r-md); background:var(--sunken)}
+  .poolchk input{position:absolute; opacity:0; width:1px; height:1px}
+  .poolchk .box{width:19px; height:19px; flex:0 0 auto; border-radius:6px; border:1.5px solid var(--line-strong);
+    display:grid; place-items:center; color:transparent; background:var(--surface)}
+  .poolchk .box svg{width:12px; height:12px; stroke-width:2.5}
+  .poolchk input:checked + .box{background:var(--brand); border-color:var(--brand); color:var(--on-brand)}
+  .poolchk input:focus-visible + .box{outline:2px solid var(--brand); outline-offset:2px}
+  .poolchk .t{display:flex; flex-direction:column; min-width:0}
+  .poolchk .h{font-size:var(--t-xs); color:var(--ink-3); font-weight:400}
+  .pooltag{display:inline-block; white-space:nowrap; font-size:var(--t-xs); font-weight:600; color:var(--brand-ink);
+    background:var(--brand-soft); border-radius:99px; padding:0 7px; margin-left:4px}
+  @media (forced-colors:active){ .poolchk input:checked + .box{forced-color-adjust:none; background:Highlight; color:HighlightText} }
+
   /* ── Kitty (collection) ───────────────────────────────────────────────── */
   .kstats{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
   .kstat{background:var(--sunken); border:1px solid var(--line); border-radius:var(--r-md); padding:12px 10px; min-width:0}
@@ -689,6 +704,11 @@
               <div><label for="exAmt">Amount</label><input type="number" id="exAmt" inputmode="decimal" min="0" step="0.01" placeholder="0.00"></div>
               <div><label for="exPaid">Who paid</label><select id="exPaid"></select></div>
             </div>
+            <label class="poolchk" id="exPoolRow" hidden>
+              <input type="checkbox" id="exPool">
+              <span class="box" aria-hidden="true"><svg class="i" aria-hidden="true"><use href="#i-check"/></svg></span>
+              <span class="t">Paid from contribution<span class="h" id="exPoolHint"></span></span>
+            </label>
             <div class="field" style="margin-top:16px">
               <div class="splithead">
                 <label style="margin:0">Split between</label>
@@ -737,7 +757,7 @@
             <div class="phead">
               <div>
                 <h2><svg class="i sm" aria-hidden="true"><use href="#i-jar"/></svg>Contribution</h2>
-                <p class="sub">Money everyone put in up front. Spent counts every expense paid by whoever collected it.</p>
+                <p class="sub">Money everyone put in up front. Spent counts the expenses marked &ldquo;Paid from contribution&rdquo;.</p>
               </div>
             </div>
             <div id="kitty"></div>
@@ -870,6 +890,17 @@
   // themselves: it moves no balance but keeps the kitty totals honest.
   var KITTY="collection";
   function isKitty(p){ return p.note===KITTY; }
+  // people who collected contribution money
+  function kittyHolders(){
+    var h={}; state.payments.forEach(function(p){ if(isKitty(p) && personActive(p.to)) h[p.to]=1; });
+    return h;
+  }
+  // Was this expense paid out of the contribution pool? Only someone holding
+  // contribution money can pay from it. fromPool is true/false when the box was
+  // set; older expenses have no flag and keep the old rule (holder paid = pool).
+  function paidFromPool(e, holders){
+    return !!(holders||kittyHolders())[e.paidBy] && e.fromPool!==false;
+  }
 
   // ===== expense split helpers =====
   // weights maps personId -> positive number. Participants are the keys with w > 0.
@@ -901,8 +932,10 @@
       expenses:state.expenses.map(function(e){
         var parts=partsOf(e), w={};
         parts.forEach(function(id){ w[nameOf(id)]=e.weights[id]; });
-        return { desc:e.desc, amount:e.amount, paidBy:nameOf(e.paidBy),
+        var o={ desc:e.desc, amount:e.amount, paidBy:nameOf(e.paidBy),
                  shares:parts.map(nameOf), weights:w, ts:e.ts };
+        if(typeof e.fromPool==="boolean") o.fromPool=e.fromPool;
+        return o;
       }),
       payments:state.payments.filter(function(p){ return personActive(p.from) && personActive(p.to); }).map(function(p){
         return { date:p.date||isoDate(p.ts), ts:p.ts, from:nameOf(p.from), to:nameOf(p.to), amount:p.amount, note:p.note||"" };
@@ -927,8 +960,10 @@
       if(!any){ // legacy: an equal split over `shares`
         (Array.isArray(e.shares)?e.shares:[]).forEach(function(n){ if(map[n]) w[map[n]]=1; });
       }
-      return { id:uid(), desc:String(e.desc||""), amount:Number(e.amount||0),
+      var out={ id:uid(), desc:String(e.desc||""), amount:Number(e.amount||0),
                paidBy:map[e.paidBy]||"", weights:w, ts:Number(e.ts||0) };
+      if(typeof e.fromPool==="boolean") out.fromPool=e.fromPool;
+      return out;
     }).filter(function(e){ return e.paidBy; });
 
     var py=Array.isArray(d.payments)?d.payments:[];
@@ -939,6 +974,12 @@
                date:String(p.date||isoDate(ts)), ts:ts, note:String(p.note||"") };
     }).filter(function(p){ return p.from && p.to && (p.from!==p.to || isKitty(p)) && p.amount>0; });
     state.draft=null;
+  }
+  // did the backend keep "not paid from contribution"? An older Code.gs drops
+  // the flag, and a missing flag means "from the pool" for the collector
+  function poolFlagsSurvived(sent, got){
+    if(!(sent.expenses||[]).some(function(e){ return e.fromPool===false; })) return true;
+    return (got.expenses||[]).some(function(e){ return typeof e.fromPool==="boolean"; });
   }
   // did the backend keep our weights? (silent loss would revert splits to equal)
   function weightsSurvived(sent, got){
@@ -1016,6 +1057,12 @@
       if(!ok){
         setStatus("bad","The sheet didn’t confirm the save");
         toast("Save may not have landed — check the Apps Script deployment");
+      }else if(!poolFlagsSurvived(payload,check)){
+        setStatus("bad","Saved, but “paid from contribution” wasn’t kept");
+        if(!lsGet(LS_WARN+":pool")){
+          lsSet(LS_WARN+":pool","1");
+          toast("Your Code.gs is older than this page and can’t store “Paid from contribution”. Update and redeploy it.");
+        }
       }else if(!weightsSurvived(payload,check)){
         setStatus("bad","Saved, but uneven shares were dropped");
         if(!lsGet(LS_WARN)){
@@ -1218,6 +1265,7 @@
     if(!enough) return;
     ensureDraft();
     fillSelect($("exPaid"), null, 0);
+    syncPool();
     $("modeEqual").setAttribute("aria-pressed", splitMode==="equal"?"true":"false");
     $("modeCustom").setAttribute("aria-pressed", splitMode==="custom"?"true":"false");
     renderSplit();
@@ -1225,6 +1273,29 @@
     $("expFormTitle").textContent = editing ? "Edit expense" : "Add an expense";
     $("saveExpenseLabel").textContent = editing ? "Save changes" : "Add expense";
     $("cancelEdit").hidden = !editing;
+  }
+
+  // poolChoice: null = follow who paid (collector → ticked), else the user's pick
+  var poolChoice=null;
+  function syncPool(){
+    var holders=kittyHolders(), ids=Object.keys(holders), row=$("exPoolRow"), box=$("exPool");
+    row.hidden=!ids.length;
+    if(!ids.length){ box.checked=false; return; }
+    var payer=$("exPaid").value, isHolder=!!holders[payer];
+    box.checked = poolChoice===null ? isHolder : (poolChoice && isHolder);
+    var hint;
+    if(isHolder) hint=money(kittyHeldBy(payer))+" left with "+(payer===me?"you":nameOf(payer));
+    else hint=(ids.length===1?nameOf(ids[0]):"The collector")+" must be who paid";
+    $("exPoolHint").textContent=hint;
+  }
+  function onPoolToggle(){
+    var holders=kittyHolders(), ids=Object.keys(holders), box=$("exPool");
+    if(box.checked && !holders[$("exPaid").value]){
+      if(ids.length===1){ $("exPaid").value=ids[0]; }
+      else { box.checked=false; toast("Pick the person holding the contribution under Who paid"); return; }
+    }
+    poolChoice=box.checked;
+    syncPool();
   }
 
   function renderExpenses(){
@@ -1236,6 +1307,7 @@
       box.innerHTML='<p class="empty"><b>Nothing logged yet</b>Add the first expense above and the balances work themselves out.</p>';
       return;
     }
+    var holders=kittyHolders();
     state.expenses.slice().reverse().forEach(function(e){
       var parts=partsOf(e);
       var row=el("div","lrow"+(editingExpense===e.id?" editing":""));
@@ -1245,7 +1317,9 @@
       var meta=(nameOf(e.paidBy)||"?")+" paid · ";
       meta += (isEqualSplit(e) ? "" : "uneven, ")
             + parts.length+" way"+(parts.length===1?"":"s");
-      body.appendChild(el("div","m",meta));
+      var m=el("div","m",meta);
+      if(paidFromPool(e,holders)) m.appendChild(el("span","pooltag","from contribution"));
+      body.appendChild(m);
       row.appendChild(body);
       row.appendChild(el("div","amt num",money(e.amount)));
 
@@ -1296,9 +1370,8 @@
     totals.appendChild(t1); totals.appendChild(t2);
     var ks=state.payments.filter(isKitty);
     if(ks.length){
-      var kc=ks.reduce(function(a,p){ return a+p.amount; },0), holders={};
-      ks.forEach(function(p){ holders[p.to]=1; });
-      var kspent=state.expenses.reduce(function(a,e){ return a+(holders[e.paidBy]?e.amount:0); },0);
+      var kc=ks.reduce(function(a,p){ return a+p.amount; },0), holders=kittyHolders();
+      var kspent=state.expenses.reduce(function(a,e){ return a+(paidFromPool(e,holders)?e.amount:0); },0);
       var kl=kc-kspent;
       var t3=el("div"); t3.innerHTML='<b class="num"></b>'+(kl<-0.005?"contribution overspent":"contribution left");
       t3.firstChild.textContent=money(Math.abs(kl)); totals.appendChild(t3);
@@ -1544,7 +1617,8 @@
     var got=0, spent=0;
     state.payments.forEach(function(p){ if(isKitty(p) && p.to===id) got+=p.amount; });
     if(!got) return 0;
-    state.expenses.forEach(function(e){ if(e.paidBy===id) spent+=e.amount; });
+    var holders=kittyHolders();
+    state.expenses.forEach(function(e){ if(e.paidBy===id && paidFromPool(e,holders)) spent+=e.amount; });
     return got-spent;
   }
   function renderKitty(){
@@ -1570,7 +1644,8 @@
       if(!holders[p.to]){ holders[p.to]={ got:0, spent:0 }; order.push(p.to); }
       holders[p.to].got+=p.amount;
     });
-    state.expenses.forEach(function(e){ if(holders[e.paidBy]) holders[e.paidBy].spent+=e.amount; });
+    var hset=kittyHolders();
+    state.expenses.forEach(function(e){ if(holders[e.paidBy] && paidFromPool(e,hset)) holders[e.paidBy].spent+=e.amount; });
     var collected=0, spent=0;
     order.forEach(function(id){ collected+=holders[id].got; spent+=holders[id].spent; });
     var left=collected-spent, over=left<-0.005;
@@ -1779,15 +1854,21 @@
     var w={}; parts.forEach(function(id){ w[id]=state.draft[id]; });
     var rounded=Math.round(amt*100)/100;
 
+    var pool=$("exPoolRow").hidden ? undefined : $("exPool").checked;
     if(editingExpense){
       var e=state.expenses.find(function(x){ return x.id===editingExpense; });
-      if(e){ e.desc=desc; e.amount=rounded; e.paidBy=paidBy; e.weights=w; }
+      if(e){
+        e.desc=desc; e.amount=rounded; e.paidBy=paidBy; e.weights=w;
+        if(typeof pool==="boolean") e.fromPool=pool;
+      }
       editingExpense=null;
       toast("Expense updated");
     }else{
-      state.expenses.push({ id:uid(), desc:desc, amount:rounded, paidBy:paidBy, weights:w, ts:Date.now() });
+      var ne={ id:uid(), desc:desc, amount:rounded, paidBy:paidBy, weights:w, ts:Date.now() };
+      if(typeof pool==="boolean") ne.fromPool=pool;
+      state.expenses.push(ne);
     }
-    $("exDesc").value=""; $("exAmt").value="";
+    $("exDesc").value=""; $("exAmt").value=""; poolChoice=null;
     state.draft=null; splitMode="equal";
     renderApp(); persist(); $("exDesc").focus();
   }
@@ -1802,13 +1883,15 @@
     splitMode=isEqualSplit(e)?"equal":"custom";
     renderApp();
     fillSelect($("exPaid"), e.paidBy, 0);
+    poolChoice=paidFromPool(e);
+    syncPool();
     setTab("log");
     $("expPanel").scrollIntoView({behavior:"smooth", block:"start"});
     $("exDesc").focus();
   }
   function cancelEditExpense(){
     editingExpense=null;
-    $("exDesc").value=""; $("exAmt").value="";
+    $("exDesc").value=""; $("exAmt").value=""; poolChoice=null;
     state.draft=null; splitMode="equal";
     renderApp();
   }
@@ -1912,6 +1995,8 @@
     ["log","bal","kit","set"].forEach(function(t){ $("tab-"+t).onclick=function(){ setTab(t); }; });
 
     $("saveExpense").onclick=saveExpense;
+    $("exPaid").addEventListener("change", syncPool);
+    $("exPool").addEventListener("change", onPoolToggle);
     $("cancelEdit").onclick=cancelEditExpense;
     $("exAmt").addEventListener("input", refreshSplitAmounts);
     $("exAmt").addEventListener("keydown",function(e){ if(e.key==="Enter") saveExpense(); });
